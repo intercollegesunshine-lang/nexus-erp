@@ -1,6 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 // FIXED: Added 'src' to the path so it correctly finds your database
-import { prisma } from '../../../../lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 
 // FIXED: Now imports from the correct, active configuration file!
