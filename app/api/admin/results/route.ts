@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/authOptions";
+
+// FIXED: Now imports from the correct, active configuration file!
+import { authOptions } from "@/lib/auth"; 
+
 // Define the expected shape of the request body for strict TypeScript validation
 interface PublishGradeRequest {
   studentId: string;
