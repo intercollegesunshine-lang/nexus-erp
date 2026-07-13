@@ -3,13 +3,23 @@ import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
+// Define the expected shape of the request body for strict TypeScript validation
+interface PublishGradeRequest {
+  studentId: string;
+  examName: string;
+  subject: string;
+  marksObtained: number;
+  totalMarks: number;
+  grade: string;
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    // 1. Get the grade data submitted by the Admin
-    const body = await request.json();
+    // 1. Get the grade data submitted by the Admin with strict typing
+    const body: PublishGradeRequest = await request.json();
     const { studentId, examName, subject, marksObtained, totalMarks, grade } = body;
 
     // 2. Save it permanently to the database linked to this specific studentId
