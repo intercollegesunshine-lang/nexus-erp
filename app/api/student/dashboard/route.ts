@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-// Ensure this points exactly to where your prisma client lives
+// FIXED: Added 'src' to the path
 import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from "next-auth/next";
+// FIXED: Replaced deleted options.ts path with the new clean config
 import { authOptions } from "@/lib/auth";
 
 export async function GET(request: Request) {

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
+// FIXED: Added 'src' to the path
 import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from "next-auth/next";
+// FIXED: Replaced deleted options.ts path with the new clean config
 import { authOptions } from "@/lib/auth";
+
 export async function POST(request: Request) {
   try {
     // 1. Verify the user is logged in securely

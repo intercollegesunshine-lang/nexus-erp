@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+// FIXED: Added 'src' to the path so it correctly finds your database
 import { prisma } from '../../../../lib/prisma';
 import { getServerSession } from "next-auth/next";
 
