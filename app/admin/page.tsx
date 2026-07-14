@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Search, Filter, MoreVertical, ShieldCheck, 
-  ArrowLeft, Download, DollarSign, GraduationCap, X, Plus
+  ArrowLeft, Download, DollarSign, GraduationCap, X, Plus,
+  UploadCloud
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -15,6 +16,10 @@ export default function AdminDashboard() {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [newGrade, setNewGrade] = useState({ subject: '', marks: '', grade: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // NEW: State and Ref for Bulk Upload
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -58,6 +63,38 @@ export default function AdminDashboard() {
     `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.enrollmentNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // NEW: Handle Excel Upload Logic
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/admin/students/bulk-upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        alert(`Successfully imported ${data.count} students!`);
+        window.location.reload(); // Refresh the page to show the newly added students
+      } else {
+        alert(`Upload failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("An error occurred during upload.");
+    } finally {
+      setIsUploading(false);
+      // Reset the input so you can upload the same file again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // Function to submit the grade to our API
   const handlePublishGrade = async (e: React.FormEvent) => {
@@ -127,6 +164,28 @@ export default function AdminDashboard() {
             >
               <ArrowLeft size={16} /> <span>Back to App</span>
             </button>
+
+            {/* NEW: Hidden File Input and Upload Button */}
+            <input 
+              type="file" 
+              accept=".xlsx, .xls, .csv" 
+              className="hidden" 
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 transition-colors text-sm font-medium text-white shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50"
+            >
+              {isUploading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <UploadCloud size={16} />
+              )}
+              <span>{isUploading ? 'Uploading...' : 'Bulk Upload'}</span>
+            </button>
+
             <button className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 transition-colors text-sm font-medium text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]">
               <Download size={16} /> <span>Export CSV</span>
             </button>
