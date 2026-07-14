@@ -1,39 +1,23 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '../../../../lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { prisma } from '@/lib/prisma';
 
-export const dynamic = 'force-dynamic'; // Prevents Next.js from caching empty data
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Fetch ALL students along with their fees and results
     const students = await prisma.studentProfile.findMany({
       include: {
-        fees: true,
-        results: true
+        class: true, // Fetch the linked class data (like "10-A")
+        user: {
+          select: { email: true } // Only grab the email from the linked User account
+        }
       },
-      orderBy: {
-        firstName: 'asc'
-      }
+      orderBy: { createdAt: 'desc' } // Show newest students first
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      data: students 
-    });
-
-  } catch (error) {
-    console.error("Admin API Error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch student database" }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, data: students });
+  } catch (error: any) {
+    console.error("Failed to fetch students:", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch student data." }, { status: 500 });
   }
 }
