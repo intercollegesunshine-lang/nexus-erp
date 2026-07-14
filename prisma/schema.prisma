@@ -1,120 +1,159 @@
-// prisma/schema.prisma
-
+// STREAMING_CHUNK:Configuring database generator and datasource...
 generator client {
-  provider = "prisma-client-js"
+provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // Updated for your Neon Cloud Database!
-  url      = env("DATABASE_URL")
+provider = "postgresql"
+url      = env("DATABASE_URL")
 }
 
-// 1. Core User Model for Authentication
+// STREAMING_CHUNK:Defining core User and Student models...
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  
-  role          String    @default("STUDENT") 
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  studentProfile StudentProfile?
+id             String          @id @default(cuid())
+email          String          @unique
+passwordHash   String
+role           String          @default("STUDENT")
+createdAt      DateTime        @default(now())
+updatedAt      DateTime        @default(now()) @updatedAt
+studentProfile StudentProfile?
 }
 
-// 2. NEW: Class Model (Handles Timetables and Grouping)
-model Class {
-  id            String          @id @default(cuid())
-  name          String          @unique // e.g., "10-A", "11-Science"
-  timetableUrl  String?         // URL to the uploaded timetable image/PDF
-  
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  
-  // A Class has many Students
-  students      StudentProfile[]
-}
-
-// 3. Student Specific Data
 model StudentProfile {
-  id            String    @id @default(cuid())
-  
-  // Foreign Keys
-  userId        String    @unique
-  classId       String?   // NEW: Optional link to a Class
-  
-  // Relations
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  class         Class?    @relation(fields: [classId], references: [id], onDelete: SetNull)
-  
-  enrollmentNo  String    @unique
-  firstName     String
-  lastName      String
-  dateOfBirth   DateTime
-  bloodGroup    String?
-  gradeLevel    String    // e.g., "10th"
-  section       String    // e.g., "A"
-  
-  fees          FeeInvoice[]
-  results       ExamResult[]
-  attendance    Attendance[]
+id           String       @id @default(cuid())
+userId       String       @unique
+user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+enrollmentNo String       @unique
+firstName    String
+lastName     String
+dateOfBirth  DateTime
+bloodGroup   String?
+gradeLevel   String
+section      String
+
+classId      String?
+class        Class?       @relation(fields: [classId], references: [id])
+
+fees         FeeInvoice[]
+results      ExamResult[]
+attendances  Attendance[]
+submissions  Submission[] // NEW: Links to assignments the student submitted!
+
+createdAt    DateTime     @default(now())
+updatedAt    DateTime     @default(now()) @updatedAt
 }
 
-// 4. Fee Management System
+// STREAMING_CHUNK:Defining Class and Schedule models...
+model Class {
+id           String    @id @default(cuid())
+name         String    @unique
+timetableUrl String?
+
+students     StudentProfile[]
+schedules    Schedule[]
+assignments  Assignment[] // NEW: Assignments belong to a specific class
+}
+
+model Schedule {
+id        String   @id @default(cuid())
+classId   String
+class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+dayOfWeek String
+
+subject   String
+startTime String
+
+endTime   String
+
+room      String?
+}
+
+// STREAMING_CHUNK:Defining Financial and Academic models...
 model FeeInvoice {
-  id            String        @id @default(cuid())
-  studentId     String
-  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  title         String        // e.g., "Tuition Fee - Q1"
-  amount        Float
-  dueDate       DateTime
-  
-  status        String        @default("PENDING") 
-  
-  payments      Payment[]
-  createdAt     DateTime      @default(now())
+id          String   @id @default(cuid())
+studentId   String
+student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+title       String
+amount      Float
+dueDate     DateTime
+status      String   @default("PENDING")
+
+createdAt   DateTime @default(now())
+updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model Payment {
-  id            String     @id @default(cuid())
-  invoiceId     String
-  invoice       FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  
-  amountPaid    Float
-  paymentDate   DateTime   @default(now())
-  transactionId String?    @unique
-  paymentMethod String     // e.g., "STRIPE", "RAZORPAY", "UPI"
+id            String   @id @default(cuid())
+invoiceId     String   @unique
+amountPaid    Float
+paymentMethod String
+transactionId String   @unique
+date          DateTime @default(now())
 }
 
-// 5. Result & Academic Management
 model ExamResult {
-  id            String         @id @default(cuid())
-  studentId     String
-  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  examName      String         // e.g., "Mid-Term 2026"
-  subject       String
-  marksObtained Float
-  totalMarks    Float
-  grade         String
-  remarks       String?
-  
-  createdAt     DateTime       @default(now())
+id            String   @id @default(cuid())
+studentId     String
+student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+examName      String
+subject       String
+marksObtained Float
+totalMarks    Float
+grade         String
+remarks       String?
+
+createdAt     DateTime @default(now())
 }
 
-// 6. Attendance Tracking
 model Attendance {
-  id            String         @id @default(cuid())
-  studentId     String
-  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
-  date          DateTime
-  status        String         // "PRESENT", "ABSENT", "LATE", "HALF_DAY"
-  
-  @@unique([studentId, date])
+id          String   @id @default(cuid())
+studentId   String
+student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+date        DateTime
+subject     String   @default("Overall")
+status      String
+
+remarks     String?
+
+createdAt   DateTime @default(now())
+
+@@unique([studentId, date, subject])
+}
+
+// STREAMING_CHUNK:Defining new Assignment and Submission models...
+model Assignment {
+id          String       @id @default(cuid())
+title       String
+description String
+subject     String
+dueDate     DateTime
+
+classId     String
+class       Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+submissions Submission[]
+
+createdAt   DateTime     @default(now())
+}
+
+model Submission {
+id           String         @id @default(cuid())
+studentId    String
+student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+assignmentId String
+assignment   Assignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+fileUrl      String         // The UploadThing URL
+status       String         @default("SUBMITTED") // SUBMITTED or GRADED
+grade        String?        // e.g., "95/100" or "A"
+
+submittedAt  DateTime       @default(now())
+
+@@unique([studentId, assignmentId]) // Prevents a student from submitting the same assignment twice
 }

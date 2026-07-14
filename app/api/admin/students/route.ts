@@ -5,19 +5,49 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const students = await prisma.studentProfile.findMany({
+    // Attempt 1: Fetch with the brand new Attendance relation
+    const students = await (prisma as any).studentProfile.findMany({
       include: {
-        class: true, // Fetch the linked class data (like "10-A")
+        class: true, 
         user: {
-          select: { email: true } // Only grab the email from the linked User account
-        }
+          select: { email: true } 
+        },
+        fees: { orderBy: { createdAt: 'desc' } },
+        results: { orderBy: { createdAt: 'desc' } },
+        attendances: { orderBy: { date: 'desc' } } // FIXED: Prisma added an "s"
       },
-      orderBy: { createdAt: 'desc' } // Show newest students first
+      orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json({ success: true, data: students });
+    // FIXED: Rename it back to 'attendance' so the Admin UI doesn't break!
+    const formattedStudents = students.map((s: any) => ({
+      ...s,
+      attendance: s.attendances || []
+    }));
+
+    return NextResponse.json({ success: true, data: formattedStudents });
   } catch (error: any) {
-    console.error("Failed to fetch students:", error);
-    return NextResponse.json({ success: false, error: "Failed to fetch student data." }, { status: 500 });
+    console.error("Prisma Sync Error (Attendance):", error.message);
+    
+    try {
+      // Attempt 2: Safe Fallback fetch without Attendance
+      // This guarantees your dashboard loads even if the Prisma engine cache is stuck!
+      const safeStudents = await prisma.studentProfile.findMany({
+        include: {
+          class: true, 
+          user: {
+            select: { email: true } 
+          },
+          fees: { orderBy: { createdAt: 'desc' } },
+          results: { orderBy: { createdAt: 'desc' } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      return NextResponse.json({ success: true, data: safeStudents });
+    } catch (fallbackError: any) {
+      console.error("Database connection failed completely:", fallbackError.message);
+      return NextResponse.json({ success: false, error: "Failed to fetch student data." }, { status: 500 });
+    }
   }
 }

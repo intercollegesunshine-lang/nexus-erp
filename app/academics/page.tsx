@@ -7,6 +7,7 @@ import {
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
+import { generateTranscriptPDF } from '@/lib/pdfGenerator';
 
 // Simulate data for the chart
 const performanceData = [
@@ -73,7 +74,10 @@ export default function AcademicsPage() {
             <p className="text-gray-400">View and download your official grade reports.</p>
           </div>
           
-          <button className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all font-medium">
+          <button 
+            onClick={() => generateTranscriptPDF(studentData)}
+            className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all font-medium"
+          >
             <Download size={18} />
             <span>Download PDF</span>
           </button>
@@ -119,6 +123,13 @@ export default function AcademicsPage() {
                           exam.grade.includes('B') ? 'text-blue-400' : 'text-orange-400'
                         }`}>{exam.grade}</p>
                       </div>
+                      <button 
+                        onClick={() => generateTranscriptPDF(studentData, [exam])}
+                        className="ml-6 p-3 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                        title="Download Single Certificate"
+                      >
+                        <Download size={18} />
+                      </button>
                     </div>
                   </div>
                 ))}
