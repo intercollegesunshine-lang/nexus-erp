@@ -12,18 +12,28 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Using (prisma as any) to bypass any lingering TypeScript cache issues
+    // Fetch the student and deeply include their class assignments and personal submissions!
     const studentProfile = await (prisma as any).studentProfile.findFirst({
       where: { user: { email: session.user.email } },
       include: {
         class: {
           include: {
-            schedules: { orderBy: { startTime: 'asc' } }
+            schedules: { orderBy: { startTime: 'asc' } },
+            // NEW: Fetch all assignments for this student's class!
+            assignments: { 
+              orderBy: { dueDate: 'asc' },
+              include: {
+                // Fetch the student's own submissions so the UI knows if it's completed
+                submissions: {
+                  where: { student: { user: { email: session.user.email } } }
+                }
+              }
+            }
           }
         },
         fees: { orderBy: { createdAt: 'desc' } },
         results: { orderBy: { createdAt: 'desc' } },
-        attendances: { orderBy: { date: 'desc' } } // FIXED: Prisma added an "s" to attendances!
+        attendances: { orderBy: { date: 'desc' } }
       }
     });
 
@@ -31,7 +41,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Student profile not found" }, { status: 404 });
     }
 
-    // FIXED: Rename it back to 'attendance' so our frontend doesn't break!
+    // Rename attendances to attendance for the frontend
     const formattedData = {
       ...studentProfile,
       attendance: studentProfile.attendances || []

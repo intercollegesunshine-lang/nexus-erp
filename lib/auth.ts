@@ -1,8 +1,8 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-// FIXED: Because both files are in the same folder, we just use "./"
-import { prisma } from "./prisma"; 
+import { prisma } from "./prisma";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,8 +25,8 @@ export const authOptions: NextAuthOptions = {
 
          if (!user) return null;
 
-         // Verify the password
-         const isPasswordValid = credentials.password === "password123" || user.passwordHash === credentials.password;
+         // STRICT SECURITY: Only allow bcrypt comparison
+         const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
 
          if (!isPasswordValid) return null;
 
@@ -39,7 +39,6 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    // Restored your Google auto-database registration logic!
     async signIn({ user, account }) {
       if (account?.provider === 'google' && user.email) {
         const existingUser = await prisma.user.findUnique({

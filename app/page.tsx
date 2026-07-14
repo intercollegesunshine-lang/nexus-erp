@@ -172,9 +172,9 @@ export default function StudentApp() {
               onClick={() => {
                 if (item.label === 'Academic Results') window.location.href = '/academics';
                 if (item.label === 'Fees & Payments') window.location.href = '/fees';
-                // NEW: Added the routes for Attendance and Assignments!
                 if (item.label === 'Attendance & Timetable') window.location.href = '/attendance';
                 if (item.label === 'Assignments') window.location.href = '/assignments';
+                if (item.label === 'Settings') window.location.href = '/settings';
               }}
               className={`w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl transition-all duration-300 group ${item.active ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'} ${!isSidebarOpen && 'lg:justify-center lg:px-0'}`}
             >

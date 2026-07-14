@@ -1,874 +1,1379 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Users, Search, Download, UploadCloud, Plus, X, 
-  LayoutDashboard, BookOpen, Settings, LogOut, ShieldCheck, Mail, Lock,
-  MoreHorizontal, CreditCard, Award, ChevronRight, Calendar, Clock, CheckSquare,
-  Trash2, Edit2, Save
+  Users, BookOpen, Settings, CreditCard, Search, 
+  MoreVertical, Plus, Upload, Calendar, X, 
+  CheckCircle2, AlertCircle, FileText, Download,
+  Trash2, Edit3, ArrowRight, Clock, Zap, UploadCloud, 
+  DollarSign, Award, Building, CalendarDays, BellRing, ShieldAlert, Save
 } from 'lucide-react';
-import { UploadButton } from "@/lib/uploadthing";
+
+import { UploadDropzone } from "@/lib/uploadthing";
 
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState('Directory');
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  
+  // --- Data State ---
   const [students, setStudents] = useState<any[]>([]);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // --- MODAL STATES ---
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isTimetableModalOpen, setIsTimetableModalOpen] = useState(false);
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isActionPanelOpen, setIsActionPanelOpen] = useState(false);
-  
-  // --- FORM STATES ---
+  // --- Super Profile State ---
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'details' | 'fees' | 'results' | 'attendance'>('details');
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', enrollmentNo: '', gradeLevel: '', section: '' });
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileTab, setProfileTab] = useState('Overview');
+  const [editFormData, setEditFormData] = useState({ firstName: '', lastName: '', gradeLevel: '', section: '' });
+  const [attendanceData, setAttendanceData] = useState({ date: new Date().toISOString().split('T')[0], status: 'PRESENT', subject: 'Overall' });
 
-  const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: '', 
-    rollNo: '', gradeLevel: '10th', section: 'A', className: ''
-  });
-  
-  const [timetableForm, setTimetableForm] = useState({ className: '' });
-  
-  const [scheduleForm, setScheduleForm] = useState({
-    className: '', dayOfWeek: 'Monday', subject: '', room: '', startTime: '09:00', endTime: '10:00'
-  });
-  
-  const [feeForm, setFeeForm] = useState({ title: '', amount: '', dueDate: '' });
-  const [resultForm, setResultForm] = useState({ examName: 'Mid-Term 2026', subject: '', marksObtained: '', totalMarks: '100', grade: '', remarks: '' });
+  // --- Assignment State ---
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [newAssignment, setNewAssignment] = useState({ title: '', description: '', subject: '', dueDate: '', className: '' });
+  const [gradeInputs, setGradeInputs] = useState<Record<string, string>>({});
+  const [isSubmittingGrade, setIsSubmittingGrade] = useState<string | null>(null);
 
-  // NEW: Attendance Form State
-  const [attendanceForm, setAttendanceForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    subject: 'Overall',
-    status: 'PRESENT',
-    remarks: ''
-  });
+  // --- Bulk Upload State ---
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [isUploadingBulk, setIsUploadingBulk] = useState(false);
 
-  const fetchStudents = async () => {
-    setIsLoadingStudents(true);
+  // --- Add Single Student State ---
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [newStudent, setNewStudent] = useState({ firstName: '', lastName: '', email: '', rollNo: '', className: '' });
+
+  // --- Build Schedule State ---
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleData, setScheduleData] = useState({ className: '', dayOfWeek: 'Monday', subject: '', room: '', startTime: '09:00', endTime: '10:00' });
+
+  // --- Upload Timetable State ---
+  const [isTimetableModalOpen, setIsTimetableModalOpen] = useState(false);
+  const [timetableClass, setTimetableClass] = useState('');
+
+  // --- Academics & Fees State with Search & Dynamic Arrays ---
+  const [feeData, setFeeData] = useState({ studentId: '', title: '', amount: '', dueDate: '' });
+  const [feeStudentSearch, setFeeStudentSearch] = useState('');
+  const [isFeeSearchOpen, setIsFeeSearchOpen] = useState(false);
+  const [isSubmittingFee, setIsSubmittingFee] = useState(false);
+
+  const [resultStudentSearch, setResultStudentSearch] = useState('');
+  const [isResultSearchOpen, setIsResultSearchOpen] = useState(false);
+  const [resultStudentId, setResultStudentId] = useState('');
+  const [resultExamName, setResultExamName] = useState('');
+  const [resultSubjects, setResultSubjects] = useState([{ subject: '', marksObtained: '', totalMarks: '100', grade: '' }]);
+  const [isSubmittingResult, setIsSubmittingResult] = useState(false);
+
+  // --- System Settings State ---
+  const [settingsData, setSettingsData] = useState({
+    schoolName: 'Nexus Academy',
+    contactEmail: 'admin@nexus.edu',
+    academicYear: '2026-2027',
+    currentTerm: 'Term 1',
+    emailAlerts: true,
+    smsAlerts: false
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // --- Fetch Data ---
+  const fetchData = async () => {
+    setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/students');
-      const data = await res.json();
-      if (data.success) setStudents(data.data);
+      const [studentsRes, assignmentsRes] = await Promise.all([
+        fetch('/api/admin/students'),
+        fetch('/api/admin/assignments')
+      ]);
+      
+      const studentsJson = await studentsRes.json();
+      const assignmentsJson = await assignmentsRes.json();
+      
+      if (studentsJson.success) setStudents(studentsJson.data);
+      if (assignmentsJson.success) setAssignments(assignmentsJson.data);
     } catch (error) {
-      console.error("Failed to fetch students", error);
+      console.error("Failed to fetch data:", error);
     } finally {
-      setIsLoadingStudents(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStudents();
+    fetchData();
   }, []);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // --- UI Action Handlers ---
 
-    setIsUploading(true);
-    const formPayload = new FormData();
-    formPayload.append('file', file);
-
+  const handleBulkUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bulkFile) return;
+    setIsUploadingBulk(true);
+    const formData = new FormData();
+    formData.append('file', bulkFile);
     try {
-      const res = await fetch('/api/admin/students/bulk-upload', {
-        method: 'POST',
-        body: formPayload,
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`Successfully imported ${data.count} students!`);
-        fetchStudents();
-      } else {
-        alert(`Upload failed: ${data.error}`);
-      }
-    } catch (error) {
-      alert("An error occurred during upload.");
+      const res = await fetch('/api/admin/students/bulk-upload', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (json.success) {
+        alert(`Success! Imported ${json.count} students.`);
+        setIsBulkUploadModalOpen(false);
+        setBulkFile(null);
+        fetchData(); 
+      } else alert("Upload failed: " + json.error);
+    } catch (err) {
+      alert("A network error occurred.");
     } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsUploadingBulk(false);
     }
   };
 
-  const handleManualSubmit = async (e: React.FormEvent) => {
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     try {
       const res = await fetch('/api/admin/students/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(newStudent)
       });
       const data = await res.json();
       if (data.success) {
         alert("Student added successfully!");
-        setIsAddModalOpen(false);
-        setFormData({ firstName: '', lastName: '', email: '', password: '', rollNo: '', gradeLevel: '10th', section: 'A', className: '' });
-        fetchStudents();
-      } else alert(`Failed to add student: ${data.error}`);
+        setIsAddStudentModalOpen(false);
+        setNewStudent({ firstName: '', lastName: '', email: '', rollNo: '', className: '' });
+        fetchData();
+      } else {
+        alert("Error: " + data.error);
+      }
     } catch (error) {
-      alert("A network error occurred.");
-    } finally {
-      setIsSubmitting(false);
+      alert("Network error.");
     }
   };
 
-  const handleAddSchedule = async (e: React.FormEvent) => {
+  const handleBuildSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     try {
       const res = await fetch('/api/admin/classes/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scheduleForm),
+        body: JSON.stringify(scheduleData)
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Successfully added ${scheduleForm.subject} to ${scheduleForm.className}!`);
-        setScheduleForm(prev => ({ ...prev, subject: '', room: '', startTime: prev.endTime, endTime: '' }));
-      } else alert(`Failed: ${data.error}`);
+        alert("Schedule updated!");
+        setIsScheduleModalOpen(false);
+        setScheduleData({ className: '', dayOfWeek: 'Monday', subject: '', room: '', startTime: '09:00', endTime: '10:00' });
+      } else {
+        alert("Error: " + data.error);
+      }
     } catch (error) {
-      alert("A network error occurred.");
-    } finally {
-      setIsSubmitting(false);
+      alert("Network error.");
     }
+  };
+
+  const handleTimetableUploadComplete = async (url: string) => {
+    if (!timetableClass) {
+      alert("Please enter a class name first!");
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/classes/timetable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ className: timetableClass, timetableUrl: url })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Timetable PDF linked to class!");
+        setIsTimetableModalOpen(false);
+        setTimetableClass('');
+      } else {
+        alert("Database link failed: " + data.error);
+      }
+    } catch (error) {
+      alert("Network error.");
+    }
+  };
+
+  const handleCreateAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/admin/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAssignment)
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("Assignment published successfully!");
+        setIsAssignmentModalOpen(false);
+        setNewAssignment({ title: '', description: '', subject: '', dueDate: '', className: '' });
+        fetchData(); 
+      } else alert("Error: " + json.error);
+    } catch (err) {
+      console.error("Submission failed", err);
+    }
+  };
+
+  const handleSaveGrade = async (submissionId: string) => {
+    const grade = gradeInputs[submissionId];
+    if (!grade) { alert("Please enter a grade."); return; }
+    setIsSubmittingGrade(submissionId);
+    try {
+      const response = await fetch('/api/admin/grades/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId, grade })
+      });
+      const json = await response.json();
+      if (json.success) {
+        alert("Grade saved successfully!");
+        fetchData();
+      } else alert("Failed to save: " + json.error);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmittingGrade(null);
+    }
+  };
+
+  const handleDeleteStudent = async (id: string) => {
+    if (!confirm("Delete this student? All records will be lost.")) return;
+    try {
+      const res = await fetch(`/api/admin/students/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) { setIsProfileOpen(false); fetchData(); }
+    } catch (error) { console.error(error); }
+  };
+
+  const handleUpdateStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/admin/students/${selectedStudent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData)
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Profile updated!");
+        fetchData();
+        setSelectedStudent({ ...selectedStudent, ...editFormData });
+      }
+    } catch (error) { console.error(error); }
+  };
+
+  const handleMarkAttendance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/admin/attendance/mark`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: selectedStudent.id, ...attendanceData })
+      });
+      const data = await res.json();
+      if (data.success) { alert("Attendance marked!"); fetchData(); }
+    } catch (error) { console.error(error); }
   };
 
   const handleAssignFee = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    if (!feeData.studentId) return alert("Please select a student from the dropdown!");
+    setIsSubmittingFee(true);
     try {
       const res = await fetch('/api/admin/fees/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...feeForm, studentId: selectedStudent.id }),
+        body: JSON.stringify(feeData)
       });
       const data = await res.json();
       if (data.success) {
-        alert("Fee assigned to student!");
-        setFeeForm({ title: '', amount: '', dueDate: '' });
-      } else alert(`Failed to assign fee: ${data.error}`);
-    } catch (error) {
-      alert("A network error occurred.");
+        alert("Fee Invoice pushed to student!");
+        setFeeData({ studentId: '', title: '', amount: '', dueDate: '' });
+        setFeeStudentSearch('');
+        fetchData();
+      } else alert("Error: " + data.error);
+    } catch (err) {
+      alert("Network error.");
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingFee(false);
     }
   };
 
   const handlePublishResult = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    if (!resultStudentId) return alert("Please select a student from the dropdown!");
+    if (!resultExamName) return alert("Please enter the Exam Name!");
+    setIsSubmittingResult(true);
     try {
-      const res = await fetch('/api/admin/results/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...resultForm, studentId: selectedStudent.id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Result published successfully!");
-        setResultForm({ examName: 'Mid-Term 2026', subject: '', marksObtained: '', totalMarks: '100', grade: '', remarks: '' });
-      } else alert(`Failed to publish result: ${data.error}`);
-    } catch (error) {
-      alert("A network error occurred.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // NEW: Handle Marking Attendance
-  const handleMarkAttendance = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/api/admin/attendance/mark', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...attendanceForm, studentId: selectedStudent.id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`Attendance marked as ${attendanceForm.status}!`);
-        fetchStudents(); // Automatically refresh data to show in history
-        setAttendanceForm(prev => ({ ...prev, remarks: '' }));
-      } else alert(`Failed to mark attendance: ${data.error}`);
-    } catch (error) {
-      alert("A network error occurred.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleUpdateStudent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const res = await fetch(`/api/admin/students/${selectedStudent.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Student profile updated!");
-        setIsEditingProfile(false);
-        fetchStudents();
-        setSelectedStudent({ ...selectedStudent, ...editForm });
-      } else alert(`Update failed: ${data.error}`);
-    } catch (error) {
+      const promises = resultSubjects.map(sub => 
+        fetch('/api/admin/results/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId: resultStudentId,
+            examName: resultExamName,
+            ...sub
+          })
+        })
+      );
+      
+      await Promise.all(promises);
+      
+      alert("Exam Results published to transcript!");
+      setResultStudentSearch('');
+      setResultStudentId('');
+      setResultExamName('');
+      setResultSubjects([{ subject: '', marksObtained: '', totalMarks: '100', grade: '' }]);
+      fetchData();
+    } catch (err) {
       alert("Network error.");
     } finally {
-      setIsSubmitting(false);
+      setIsSubmittingResult(false);
     }
   };
 
-  const handleDeleteStudent = async () => {
-    if (!confirm(`Are you absolutely sure you want to permanently delete ${selectedStudent.firstName}? This will erase all fees, results, and attendance.`)) return;
-    try {
-      const res = await fetch(`/api/admin/students/${selectedStudent.id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        alert("Student permanently deleted.");
-        setIsActionPanelOpen(false);
-        fetchStudents();
-      } else alert(`Delete failed: ${data.error}`);
-    } catch (error) {
-      alert("Network error.");
-    }
+  const handleSaveSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSettings(true);
+    // Simulate API call for settings
+    setTimeout(() => {
+      setIsSavingSettings(false);
+      alert("System configurations successfully updated!");
+    }, 1000);
+  };
+
+  const openProfile = (student: any) => {
+    setSelectedStudent(student);
+    setEditFormData({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      gradeLevel: student.gradeLevel,
+      section: student.section
+    });
+    setIsProfileOpen(true);
+    setProfileTab('Overview');
   };
 
   const filteredStudents = students.filter(s => 
-    `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.enrollmentNo.toLowerCase().includes(searchTerm.toLowerCase())
+    `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.enrollmentNo.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans flex overflow-hidden">
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-emerald-600/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full" />
-      </div>
-
-      <aside className="w-72 bg-black/40 backdrop-blur-2xl border-r border-white/10 flex flex-col z-20 hidden md:flex">
-        <div className="p-6 flex items-center space-x-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-            <ShieldCheck size={20} className="text-white" />
+    <div className="min-h-screen bg-black text-white flex overflow-hidden font-sans selection:bg-indigo-500/30">
+      
+      {/* --- Sidebar --- */}
+      <aside className={`
+        fixed lg:relative z-40 h-screen transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+        ${isSidebarOpen ? 'w-72' : 'w-0 lg:w-24'} 
+        bg-zinc-950/80 backdrop-blur-2xl border-r border-white/10 flex flex-col
+      `}>
+        <div className="p-6 flex items-center justify-between">
+          <div className={`flex items-center space-x-3 overflow-hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 lg:hidden'}`}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 shrink-0">
+              <Zap size={20} className="text-white" />
+            </div>
+            <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+              Nexus<span className="text-emerald-400 font-light">Admin</span>
+            </span>
           </div>
-          <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-            Nexus<span className="text-emerald-400 font-light">Admin</span>
-          </span>
         </div>
-        <nav className="flex-1 px-4 space-y-2">
-          <button className="w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Users size={22} /> <span className="font-medium">Student Directory</span>
-          </button>
-          <button className="w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-colors">
-            <LayoutDashboard size={22} /> <span className="font-medium">Academics & Fees</span>
-          </button>
-          <button className="w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl text-gray-400 hover:bg-white/5 hover:text-white transition-colors">
-            <Settings size={22} /> <span className="font-medium">System Settings</span>
-          </button>
+
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
+          {[
+            { icon: Users, label: 'Student Directory', id: 'Directory' },
+            { icon: BookOpen, label: 'Assignment Manager', id: 'Assignments' },
+            { icon: CreditCard, label: 'Academics & Fees', id: 'Academics' },
+            { icon: Settings, label: 'System Settings', id: 'Settings' }
+          ].map((item) => (
+            <button 
+              key={item.id} 
+              onClick={() => setActiveTab(item.id)}
+              className={`
+                w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl transition-all duration-300 group
+                ${activeTab === item.id ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent'}
+                ${!isSidebarOpen && 'lg:justify-center lg:px-0'}
+              `}
+            >
+              <item.icon size={22} className={`shrink-0 transition-transform duration-300 group-hover:scale-110`} />
+              <span className={`font-medium whitespace-nowrap transition-all duration-300 ${!isSidebarOpen ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'opacity-100'}`}>
+                {item.label}
+              </span>
+            </button>
+          ))}
         </nav>
       </aside>
 
-      <main className="flex-1 overflow-y-auto z-10 p-8">
-        <div className="max-w-7xl mx-auto">
-          
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight mb-2">Student Directory</h1>
-              <p className="text-gray-400">Manage student profiles, enrollments, and schedules.</p>
+      {/* --- Main Content --- */}
+      <main className="flex-1 h-screen overflow-y-auto relative z-10 scroll-smooth bg-gradient-to-br from-black via-zinc-950 to-black">
+        
+        {/* --- Directory Tab --- */}
+        {activeTab === 'Directory' && (
+          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Student Directory</h1>
+                <p className="text-gray-400">Manage student profiles, enrollments, and schedules.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button 
+                  onClick={() => setIsScheduleModalOpen(true)}
+                  className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl border border-white/10 transition-colors text-sm font-medium"
+                >
+                  <Calendar size={16} /> <span>Build Schedule</span>
+                </button>
+                <button 
+                  onClick={() => setIsTimetableModalOpen(true)}
+                  className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl border border-white/10 transition-colors text-sm font-medium"
+                >
+                  <Calendar size={16} /> <span>Upload Timetable</span>
+                </button>
+                <button 
+                  onClick={() => setIsBulkUploadModalOpen(true)} 
+                  className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl border border-white/10 transition-colors text-sm font-medium"
+                >
+                  <Upload size={16} /> <span>Bulk Upload</span>
+                </button>
+                <button 
+                  onClick={() => setIsAddStudentModalOpen(true)}
+                  className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl transition-colors text-sm font-medium shadow-lg shadow-emerald-500/20"
+                >
+                  <Plus size={16} /> <span>Add Student</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
-              <input type="file" accept=".xlsx, .xls, .csv" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-              
-              <button 
-                onClick={() => setIsScheduleModalOpen(true)}
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium text-white shadow-lg"
-              >
-                <Clock size={16} className="text-purple-400" />
-                <span>Build Schedule</span>
-              </button>
-
-              <button 
-                onClick={() => setIsTimetableModalOpen(true)}
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium text-white shadow-lg"
-              >
-                <Calendar size={16} className="text-blue-400" />
-                <span>Upload Timetable</span>
-              </button>
-
-              <button 
-                onClick={() => fileInputRef.current?.click()} disabled={isUploading}
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium text-white shadow-lg"
-              >
-                {isUploading ? <div className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /> : <UploadCloud size={16} />}
-                <span>{isUploading ? 'Importing...' : 'Bulk Upload'}</span>
-              </button>
-
-              <button 
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 transition-colors text-sm font-medium text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-              >
-                <Plus size={16} /> <span>Add Student</span>
-              </button>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+              <input 
+                type="text" 
+                placeholder="Search by name or roll number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 transition-colors"
+              />
             </div>
-          </div>
 
-          <div className="mb-6 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
-            <input 
-              type="text"
-              placeholder="Search by name or roll number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 transition-colors"
-            />
-          </div>
-
-          <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-white/5 border-b border-white/10 text-xs uppercase tracking-wider text-gray-400">
-                    <th className="p-4 font-medium">Roll No</th>
-                    <th className="p-4 font-medium">Student Name</th>
-                    <th className="p-4 font-medium">Class / Grade</th>
-                    <th className="p-4 font-medium">Email Account</th>
-                    <th className="p-4 font-medium text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {isLoadingStudents ? (
-                    <tr>
-                      <td colSpan={5} className="p-8 text-center text-gray-400">
-                        <div className="w-8 h-8 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-2" />
-                        Loading Database...
-                      </td>
+            <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider border-b border-white/10">
+                      <th className="p-4 font-medium">Roll No</th>
+                      <th className="p-4 font-medium">Student Name</th>
+                      <th className="p-4 font-medium">Class / Grade</th>
+                      <th className="p-4 font-medium">Email Account</th>
+                      <th className="p-4 font-medium text-right">Actions</th>
                     </tr>
-                  ) : filteredStudents.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="p-12 text-center text-gray-500">
-                        <Users size={40} className="mx-auto mb-3 opacity-50" />
-                        <p>No students found. Use the buttons above to add some!</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map((student, idx) => (
-                      <tr key={idx} className="hover:bg-white/5 transition-colors group">
-                        <td className="p-4">
-                          <span className="font-mono text-sm text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">
-                            {student.enrollmentNo}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center space-x-3">
-                            <img 
-                              src={`https://ui-avatars.com/api/?name=${student.firstName}+${student.lastName}&background=047857&color=fff`} 
-                              className="w-8 h-8 rounded-full"
-                              alt="avatar" 
-                            />
-                            <span className="font-medium text-white">{student.firstName} {student.lastName}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="text-gray-300">{student.class?.name || student.gradeLevel}</span>
-                          <span className="text-gray-500 text-sm ml-1">Sec {student.section}</span>
-                        </td>
-                        <td className="p-4 text-gray-400 text-sm">
-                          {student.user?.email || 'No Linked Account'}
-                        </td>
-                        <td className="p-4 text-center">
-                          <button 
-                            onClick={() => {
-                              setSelectedStudent(student);
-                              setEditForm({
-                                firstName: student.firstName,
-                                lastName: student.lastName,
-                                enrollmentNo: student.enrollmentNo,
-                                gradeLevel: student.gradeLevel,
-                                section: student.section
-                              });
-                              setIsEditingProfile(false);
-                              setActiveTab('details');
-                              setIsActionPanelOpen(true);
-                            }}
-                            className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {isLoading ? (
+                      <tr><td colSpan={5} className="p-8 text-center text-gray-500">Loading students...</td></tr>
+                    ) : filteredStudents.length > 0 ? (
+                      filteredStudents.map((student: any) => (
+                        <tr key={student.id} className="hover:bg-white/5 transition-colors group">
+                          <td className="p-4 font-mono text-sm text-gray-300">{student.enrollmentNo}</td>
+                          <td className="p-4 font-medium text-white flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold shadow-lg">
+                              {student.firstName[0]}{student.lastName[0]}
+                            </div>
+                            <span>{student.firstName} {student.lastName}</span>
+                          </td>
+                          <td className="p-4 text-sm text-gray-400">{student.gradeLevel} - {student.section}</td>
+                          <td className="p-4 text-sm text-gray-400">{student.user?.email}</td>
+                          <td className="p-4 text-right">
+                            <button 
+                              onClick={() => openProfile(student)}
+                              className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors inline-flex"
+                            >
+                              <MoreVertical size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="p-12 text-center text-gray-500">
+                          <Users size={48} className="mx-auto mb-4 opacity-20" />
+                          <p>No students found. Use the buttons above to add some!</p>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Schedule Builder Modal */}
-      {isScheduleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#111111] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-              <h2 className="text-lg font-semibold text-white flex items-center">
-                <Clock className="mr-2 text-purple-400" size={20} /> Build Daily Schedule
-              </h2>
-              <button onClick={() => setIsScheduleModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
-            </div>
-            
-            <form onSubmit={handleAddSchedule} className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Class Name *</label>
-                  <input type="text" required value={scheduleForm.className} onChange={(e) => setScheduleForm({...scheduleForm, className: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none" placeholder="e.g. 10-A" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Day of Week *</label>
-                  <select required value={scheduleForm.dayOfWeek} onChange={(e) => setScheduleForm({...scheduleForm, dayOfWeek: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none appearance-none cursor-pointer">
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Subject *</label>
-                  <input type="text" required value={scheduleForm.subject} onChange={(e) => setScheduleForm({...scheduleForm, subject: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none" placeholder="e.g. Physics" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Room/Lab</label>
-                  <input type="text" value={scheduleForm.room} onChange={(e) => setScheduleForm({...scheduleForm, room: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none" placeholder="e.g. Room 302" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Start Time (24H) *</label>
-                  <input type="time" required value={scheduleForm.startTime} onChange={(e) => setScheduleForm({...scheduleForm, startTime: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">End Time (24H) *</label>
-                  <input type="time" required value={scheduleForm.endTime} onChange={(e) => setScheduleForm({...scheduleForm, endTime: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none" />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-white/10 flex justify-end space-x-3">
-                <button type="button" onClick={() => setIsScheduleModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Done</button>
-                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all shadow-lg flex items-center disabled:opacity-50">
-                  {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
-                  Add Period
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Existing Modals (Add Student, Upload Timetable) */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#111111] border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-              <h2 className="text-lg font-semibold text-white flex items-center">
-                <Plus className="mr-2 text-emerald-400" size={20} /> Register New Student
-              </h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
-            </div>
-            <form onSubmit={handleManualSubmit} className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">First Name *</label>
-                  <input type="text" required value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500/50 outline-none" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Last Name</label>
-                  <input type="text" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500/50 outline-none" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Email Address *</label>
-                  <div className="relative">
-                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:border-emerald-500/50 outline-none" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Password</label>
-                  <div className="relative">
-                    <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white focus:border-emerald-500/50 outline-none" placeholder="nexus123" />
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Roll No *</label>
-                  <input type="text" required value={formData.rollNo} onChange={(e) => setFormData({...formData, rollNo: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500/50 outline-none font-mono" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Grade</label>
-                  <input type="text" value={formData.gradeLevel} onChange={(e) => setFormData({...formData, gradeLevel: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500/50 outline-none" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-400 uppercase">Section</label>
-                  <input type="text" value={formData.section} onChange={(e) => setFormData({...formData, section: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500/50 outline-none" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-400 uppercase">Class Name</label>
-                <input type="text" value={formData.className} onChange={(e) => setFormData({...formData, className: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-emerald-500/50 outline-none" placeholder="e.g. 10-A" />
-              </div>
-              <div className="pt-4 border-t border-white/10 flex justify-end space-x-3">
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all shadow-lg flex items-center disabled:opacity-50">
-                  {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : null}
-                  {isSubmitting ? 'Creating...' : 'Register Student'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {isTimetableModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#111111] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-              <h2 className="text-lg font-semibold text-white flex items-center">
-                <Calendar className="mr-2 text-blue-400" size={20} /> Upload Timetable (Cloud)
-              </h2>
-              <button onClick={() => setIsTimetableModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-400 uppercase">Class Name *</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={timetableForm.className} 
-                  onChange={(e) => setTimetableForm({ className: e.target.value })} 
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-blue-500/50 outline-none" 
-                  placeholder="e.g. 10-A" 
-                />
-                <p className="text-xs text-gray-500 mt-1">Make sure you type the class name before uploading.</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-400 uppercase">Timetable File (PDF or Image)</label>
-                <div className="border-2 border-dashed border-white/10 rounded-xl p-4 flex justify-center bg-black/20 hover:bg-black/40 transition-colors">
-                  <UploadButton
-                    endpoint="timetableUploader"
-                    onClientUploadComplete={async (res) => {
-                      if (!timetableForm.className) {
-                         alert("Please enter a Class Name before uploading!");
-                         return;
-                      }
-                      
-                      const fileUrl = res[0].url;
-                      
-                      try {
-                        const apiRes = await fetch('/api/admin/classes/timetable', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ 
-                            className: timetableForm.className, 
-                            timetableUrl: fileUrl 
-                          }),
-                        });
-                        const data = await apiRes.json();
-                        if (data.success) {
-                          alert("Timetable securely uploaded and linked to class!");
-                          setIsTimetableModalOpen(false);
-                          setTimetableForm({ className: '' });
-                        } else {
-                          alert(`Database Error: ${data.error}`);
-                        }
-                      } catch (err) {
-                        alert("Failed to save to database.");
-                      }
-                    }}
-                    onUploadError={(error: Error) => {
-                      alert(`Upload Failed: ${error.message}`);
-                    }}
-                    appearance={{
-                       button: "bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl px-8",
-                       allowedContent: "text-gray-400 text-xs mt-2"
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isActionPanelOpen && selectedStudent && (
-        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[#111111]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
-          <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
-            <div>
-              <h2 className="text-xl font-bold text-white">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
-              <p className="text-sm text-emerald-400 font-mono">{selectedStudent.enrollmentNo}</p>
-            </div>
-            <button onClick={() => setIsActionPanelOpen(false)} className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white transition-colors">
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* ACTION PANEL TABS */}
-          <div className="flex px-6 pt-4 space-x-6 border-b border-white/10 overflow-x-auto no-scrollbar">
-            <button onClick={() => setActiveTab('details')} className={`pb-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'details' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-gray-400 hover:text-white'}`}>Overview</button>
-            <button onClick={() => setActiveTab('fees')} className={`pb-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'fees' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-white'}`}>Fees</button>
-            <button onClick={() => setActiveTab('results')} className={`pb-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'results' ? 'border-purple-500 text-purple-400' : 'border-transparent text-gray-400 hover:text-white'}`}>Results</button>
-            
-            {/* NEW ATTENDANCE TAB */}
-            <button onClick={() => setActiveTab('attendance')} className={`pb-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === 'attendance' ? 'border-orange-500 text-orange-400' : 'border-transparent text-gray-400 hover:text-white'}`}>Attendance</button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            
-            {activeTab === 'details' && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-white">Profile Details</h3>
-                  <div className="flex space-x-2">
-                    {isEditingProfile ? (
-                      <button onClick={handleUpdateStudent} disabled={isSubmitting} className="flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium rounded-lg transition-colors">
-                        <Save size={14} /> <span>Save</span>
-                      </button>
-                    ) : (
-                      <button onClick={() => setIsEditingProfile(true)} className="flex items-center space-x-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors">
-                        <Edit2 size={14} /> <span>Edit</span>
-                      </button>
                     )}
-                    <button onClick={handleDeleteStudent} className="flex items-center space-x-1 px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 text-xs font-medium rounded-lg transition-colors">
-                      <Trash2 size={14} /> <span>Delete</span>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- Assignments Tab --- */}
+        {activeTab === 'Assignments' && (
+          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Assignment Manager</h1>
+                <p className="text-gray-400">Create tasks and grade student submissions.</p>
+              </div>
+              
+              <button 
+                onClick={() => setIsAssignmentModalOpen(true)}
+                className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-purple-500/25 font-medium"
+              >
+                <Plus size={18} />
+                <span>Create New Assignment</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {isLoading ? (
+                <div className="text-center py-12 text-gray-500">Loading assignments...</div>
+              ) : assignments.length === 0 ? (
+                <div className="text-center py-16 bg-white/5 border border-white/10 rounded-3xl">
+                  <BookOpen size={48} className="mx-auto text-gray-600 mb-4" />
+                  <p className="text-gray-400">No assignments have been published yet.</p>
+                </div>
+              ) : (
+                assignments.map((assignment: any) => (
+                  <div key={assignment.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl">
+                    <div className="p-6 border-b border-white/10 flex justify-between items-start bg-black/40">
+                      <div>
+                        <div className="flex items-center space-x-3 mb-2">
+                          <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-400 text-xs font-semibold tracking-wider">
+                            {assignment.subject}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wider">
+                            Class: {assignment.class?.name || 'All'}
+                          </span>
+                          <span className="text-xs text-gray-500 flex items-center">
+                            <Calendar size={12} className="mr-1" /> Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-1">{assignment.title}</h3>
+                        <p className="text-sm text-gray-400">{assignment.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-light text-white">{assignment.submissions?.length || 0}</p>
+                        <p className="text-xs text-gray-500 font-medium">SUBMISSIONS</p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-0">
+                      {assignment.submissions?.length > 0 ? (
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
+                              <th className="px-6 py-3 font-medium">Student Name</th>
+                              <th className="px-6 py-3 font-medium">File / Link</th>
+                              <th className="px-6 py-3 font-medium">Status</th>
+                              <th className="px-6 py-3 font-medium text-right">Grade Entry</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {assignment.submissions.map((sub: any) => (
+                              <tr key={sub.id} className="hover:bg-white/5 transition-colors">
+                                <td className="px-6 py-4">
+                                  <p className="font-medium text-white">{sub.student.firstName} {sub.student.lastName}</p>
+                                  <p className="text-xs text-gray-500">{sub.student.user.email}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <a href={sub.fileUrl} target="_blank" rel="noreferrer" className="flex items-center text-sm text-blue-400 hover:text-blue-300">
+                                    <FileText size={16} className="mr-2" /> View Upload
+                                  </a>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${sub.status === 'GRADED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                    {sub.status}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center justify-end space-x-2">
+                                    <input 
+                                      type="text" 
+                                      placeholder={sub.grade || "e.g. 95/100"}
+                                      className="w-24 bg-black border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-purple-500"
+                                      value={gradeInputs[sub.id] || ''}
+                                      onChange={(e) => setGradeInputs({...gradeInputs, [sub.id]: e.target.value})}
+                                      disabled={sub.status === 'GRADED' && !gradeInputs[sub.id]}
+                                    />
+                                    <button 
+                                      onClick={() => handleSaveGrade(sub.id)}
+                                      disabled={isSubmittingGrade === sub.id}
+                                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                    >
+                                      {isSubmittingGrade === sub.id ? '...' : 'Save'}
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="px-6 py-8 text-center text-gray-500 text-sm">
+                          No students have submitted work for this assignment yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* --- Academics & Fees Tab --- */}
+        {activeTab === 'Academics' && (
+          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Academics & Fees</h1>
+                <p className="text-gray-400">Push financial invoices and exam results directly to student portals.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Financial Hub */}
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-rose-500/20 text-rose-400 rounded-xl">
+                    <DollarSign size={24} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">Assign Fee Invoice</h2>
+                </div>
+                
+                <form onSubmit={handleAssignFee} className="space-y-5">
+                  <div className="relative">
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5">Search & Select Student</label>
+                    <input 
+                      type="text" 
+                      placeholder="Type student name..." 
+                      value={feeStudentSearch}
+                      onChange={e => {
+                        setFeeStudentSearch(e.target.value);
+                        setIsFeeSearchOpen(true);
+                        if (!e.target.value) setFeeData({...feeData, studentId: ''});
+                      }}
+                      onFocus={() => setIsFeeSearchOpen(true)}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500"
+                    />
+                    {isFeeSearchOpen && feeStudentSearch && (
+                      <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                        {students.filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(feeStudentSearch.toLowerCase())).map(s => (
+                          <div 
+                            key={s.id} 
+                            onClick={() => {
+                              setFeeData({...feeData, studentId: s.id});
+                              setFeeStudentSearch(`${s.firstName} ${s.lastName} (${s.enrollmentNo})`);
+                              setIsFeeSearchOpen(false);
+                            }}
+                            className="px-4 py-3 hover:bg-white/10 cursor-pointer text-sm text-white border-b border-white/5 last:border-0"
+                          >
+                            {s.firstName} {s.lastName} <span className="text-gray-500 text-xs ml-2">{s.enrollmentNo}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5">Fee Title</label>
+                    <input type="text" required placeholder="e.g. Term 2 Tuition, Field Trip" value={feeData.title} onChange={e => setFeeData({...feeData, title: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1.5">Amount ($)</label>
+                      <input type="number" required placeholder="150" value={feeData.amount} onChange={e => setFeeData({...feeData, amount: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1.5">Due Date</label>
+                      <input type="date" required value={feeData.dueDate} onChange={e => setFeeData({...feeData, dueDate: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-rose-500" />
+                    </div>
+                  </div>
+                  <button type="submit" disabled={isSubmittingFee} className="w-full py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center space-x-2">
+                    {isSubmittingFee ? "Sending..." : <><CreditCard size={18} /><span>Push Invoice to Student</span></>}
+                  </button>
+                </form>
+              </div>
+
+              {/* Academic Hub */}
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                    <Award size={24} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">Publish Exam Result</h2>
+                </div>
+                
+                <form onSubmit={handlePublishResult} className="space-y-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative">
+                      <label className="block text-xs font-semibold text-gray-400 mb-1.5">Search & Select Student</label>
+                      <input 
+                        type="text" 
+                        placeholder="Type student name..." 
+                        value={resultStudentSearch}
+                        onChange={e => {
+                          setResultStudentSearch(e.target.value);
+                          setIsResultSearchOpen(true);
+                          if (!e.target.value) setResultStudentId('');
+                        }}
+                        onFocus={() => setIsResultSearchOpen(true)}
+                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
+                      />
+                      {isResultSearchOpen && resultStudentSearch && (
+                        <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                          {students.filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(resultStudentSearch.toLowerCase())).map(s => (
+                            <div 
+                              key={s.id} 
+                              onClick={() => {
+                                setResultStudentId(s.id);
+                                setResultStudentSearch(`${s.firstName} ${s.lastName} (${s.enrollmentNo})`);
+                                setIsResultSearchOpen(false);
+                              }}
+                              className="px-4 py-3 hover:bg-white/10 cursor-pointer text-sm text-white border-b border-white/5 last:border-0"
+                            >
+                              {s.firstName} {s.lastName} <span className="text-gray-500 text-xs ml-2">{s.enrollmentNo}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1.5">Exam Name</label>
+                      <input type="text" required placeholder="e.g. Mid-Term 2026" value={resultExamName} onChange={e => setResultExamName(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 bg-black/20 p-4 rounded-2xl border border-white/5">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-xs font-semibold text-gray-400">Subjects & Marks</label>
+                      <button 
+                        type="button" 
+                        onClick={() => setResultSubjects([...resultSubjects, { subject: '', marksObtained: '', totalMarks: '100', grade: '' }])} 
+                        className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center bg-emerald-500/10 px-2 py-1 rounded"
+                      >
+                        <Plus size={12} className="mr-1" /> Add Subject
+                      </button>
+                    </div>
+                    
+                    {resultSubjects.map((sub, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 relative group items-center">
+                        <div className="col-span-4">
+                          <input type="text" required placeholder="Subject Name" value={sub.subject} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].subject = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div className="col-span-3">
+                          <input type="number" required placeholder="Marks" value={sub.marksObtained} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].marksObtained = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div className="col-span-2">
+                          <input type="number" required placeholder="Total" value={sub.totalMarks} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].totalMarks = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div className="col-span-2">
+                          <input type="text" required placeholder="Grade" value={sub.grade} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].grade = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
+                        </div>
+                        <div className="col-span-1 flex justify-center">
+                          {resultSubjects.length > 1 && (
+                            <button type="button" onClick={() => { const newSubs = resultSubjects.filter((_, i) => i !== index); setResultSubjects(newSubs); }} className="text-gray-500 hover:text-red-400 transition-colors p-1">
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button type="submit" disabled={isSubmittingResult} className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2 mt-2">
+                    {isSubmittingResult ? "Publishing..." : <><BookOpen size={18} /><span>Publish to Transcript</span></>}
+                  </button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* --- System Settings Tab --- */}
+        {activeTab === 'Settings' && (
+          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">System Settings</h1>
+                <p className="text-gray-400">Manage global school preferences, academic years, and security.</p>
+              </div>
+              <button 
+                onClick={handleSaveSettings}
+                disabled={isSavingSettings}
+                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/25 font-medium disabled:opacity-50"
+              >
+                {isSavingSettings ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={18} />}
+                <span>Save Configurations</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* General Info */}
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
+                    <Building size={24} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">General Information</h2>
+                </div>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase">Institution Name</label>
+                    <input 
+                      type="text" 
+                      value={settingsData.schoolName}
+                      onChange={e => setSettingsData({...settingsData, schoolName: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase">Admin Contact Email</label>
+                    <input 
+                      type="email" 
+                      value={settingsData.contactEmail}
+                      onChange={e => setSettingsData({...settingsData, contactEmail: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Year */}
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                    <CalendarDays size={24} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">Academic Period</h2>
+                </div>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase">Current Academic Year</label>
+                    <select 
+                      value={settingsData.academicYear}
+                      onChange={e => setSettingsData({...settingsData, academicYear: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors appearance-none"
+                    >
+                      <option>2024-2025</option>
+                      <option>2025-2026</option>
+                      <option>2026-2027</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase">Active Term / Semester</label>
+                    <select 
+                      value={settingsData.currentTerm}
+                      onChange={e => setSettingsData({...settingsData, currentTerm: e.target.value})}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors appearance-none"
+                    >
+                      <option>Term 1</option>
+                      <option>Term 2</option>
+                      <option>Term 3</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notifications */}
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl">
+                    <BellRing size={24} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">System Notifications</h2>
+                </div>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-black/30 border border-white/5 rounded-xl">
+                    <div>
+                      <p className="font-medium text-white">Email Alerts</p>
+                      <p className="text-xs text-gray-500">Send system updates and fee reminders via email.</p>
+                    </div>
+                    <button 
+                      onClick={() => setSettingsData({...settingsData, emailAlerts: !settingsData.emailAlerts})}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${settingsData.emailAlerts ? 'bg-purple-600' : 'bg-gray-700'}`}
+                    >
+                      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${settingsData.emailAlerts ? 'left-7' : 'left-1'}`} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-black/30 border border-white/5 rounded-xl">
+                    <div>
+                      <p className="font-medium text-white">SMS Alerts</p>
+                      <p className="text-xs text-gray-500">Send critical attendance alerts via text message.</p>
+                    </div>
+                    <button 
+                      onClick={() => setSettingsData({...settingsData, smsAlerts: !settingsData.smsAlerts})}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${settingsData.smsAlerts ? 'bg-purple-600' : 'bg-gray-700'}`}
+                    >
+                      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${settingsData.smsAlerts ? 'left-7' : 'left-1'}`} />
                     </button>
                   </div>
                 </div>
+              </div>
 
-                {isEditingProfile ? (
-                  <form className="space-y-4 animate-in fade-in">
+              {/* Danger Zone */}
+              <div className="bg-rose-500/5 border border-rose-500/20 rounded-3xl p-8 backdrop-blur-xl">
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className="p-3 bg-rose-500/20 text-rose-400 rounded-xl">
+                    <ShieldAlert size={24} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white">Danger Zone</h2>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-rose-500/10 rounded-xl gap-4">
+                    <div>
+                      <p className="font-medium text-white">Clear System Cache</p>
+                      <p className="text-xs text-gray-500">Forces all portals to fetch fresh data.</p>
+                    </div>
+                    <button onClick={() => alert("Cache cleared successfully.")} className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+                      Clear Cache
+                    </button>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-rose-500/10 rounded-xl gap-4">
+                    <div>
+                      <p className="font-medium text-white text-rose-400">Reset Academic Year</p>
+                      <p className="text-xs text-gray-500">Archives all current assignments and attendance.</p>
+                    </div>
+                    <button onClick={() => confirm("WARNING: This will archive the current year. Continue?")} className="px-4 py-2 bg-rose-600/20 text-rose-500 hover:bg-rose-600/40 border border-rose-500/30 text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+                      Reset Year
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* --- Super Profile Slide-out Modal --- */}
+      <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-zinc-950 border-l border-white/10 shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isProfileOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        {selectedStudent && (
+          <div className="h-full flex flex-col">
+            
+            {/* Profile Header */}
+            <div className="p-6 border-b border-white/10 bg-black/50 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full -z-10" />
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+                  {selectedStudent.firstName[0]}{selectedStudent.lastName[0]}
+                </div>
+                <button onClick={() => setIsProfileOpen(false)} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <h2 className="text-2xl font-bold text-white">{selectedStudent.firstName} {selectedStudent.lastName}</h2>
+              <p className="text-indigo-400 font-mono text-sm">{selectedStudent.enrollmentNo}</p>
+            </div>
+
+            {/* Profile Navigation Tabs */}
+            <div className="flex border-b border-white/10 bg-black/20 px-2 overflow-x-auto no-scrollbar">
+              {['Overview', 'Fees', 'Results', 'Attendance'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setProfileTab(tab)}
+                  className={`px-4 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${profileTab === tab ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-gray-400 hover:text-white'}`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Profile Tab Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* TAB: OVERVIEW */}
+              {profileTab === 'Overview' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <form onSubmit={handleUpdateStudent} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">First Name</label>
-                        <input type="text" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500" />
+                        <input type="text" value={editFormData.firstName} onChange={e => setEditFormData({...editFormData, firstName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Last Name</label>
-                        <input type="text" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500" />
+                        <input type="text" value={editFormData.lastName} onChange={e => setEditFormData({...editFormData, lastName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
                       </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Enrollment No</label>
-                      <input type="text" value={editForm.enrollmentNo} onChange={e => setEditForm({...editForm, enrollmentNo: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500 font-mono" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Grade</label>
-                        <input type="text" value={editForm.gradeLevel} onChange={e => setEditForm({...editForm, gradeLevel: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500" />
+                        <input type="text" value={editFormData.gradeLevel} onChange={e => setEditFormData({...editFormData, gradeLevel: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Section</label>
-                        <input type="text" value={editForm.section} onChange={e => setEditForm({...editForm, section: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg p-2 text-sm text-white outline-none focus:border-emerald-500" />
+                        <input type="text" value={editFormData.section} onChange={e => setEditFormData({...editFormData, section: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
                       </div>
                     </div>
+                    <button type="submit" className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl transition-colors text-sm font-medium">
+                      <Edit3 size={16} /> <span>Save Profile Changes</span>
+                    </button>
                   </form>
-                ) : (
-                  <>
-                    <div className="bg-black/50 p-4 rounded-xl border border-white/5">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Class Assignment</p>
-                      <p className="font-medium text-white">{selectedStudent.class?.name || selectedStudent.gradeLevel}</p>
-                      <p className="text-sm text-gray-400">Section {selectedStudent.section}</p>
-                    </div>
-                    <div className="bg-black/50 p-4 rounded-xl border border-white/5">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Linked Account</p>
-                      <div className="flex items-center space-x-2"><Mail size={14} className="text-gray-400" /><p className="font-medium text-white">{selectedStudent.user?.email || 'No email registered'}</p></div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'fees' && (
-              <div className="space-y-8 animate-in fade-in">
-                <form onSubmit={(e) => { handleAssignFee(e); setTimeout(fetchStudents, 500); }} className="space-y-5 bg-black/30 p-5 rounded-2xl border border-white/5">
-                  <div className="flex items-center space-x-2 text-blue-400 mb-2"><CreditCard size={18} /><h3 className="font-semibold">Generate Invoice</h3></div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-400 uppercase">Invoice Title</label>
-                    <input type="text" required value={feeForm.title} onChange={e => setFeeForm({...feeForm, title: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-blue-500/50 outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-400 uppercase">Amount ($)</label>
-                    <input type="number" step="0.01" required value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-blue-500/50 outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-400 uppercase">Due Date</label>
-                    <input type="date" required value={feeForm.dueDate} onChange={e => setFeeForm({...feeForm, dueDate: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-blue-500/50 outline-none" />
-                  </div>
-                  <button type="submit" disabled={isSubmitting} className="w-full py-3 mt-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center justify-center disabled:opacity-50">
-                    {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
-                    Assign Fee to Student
+                  <div className="h-px bg-white/10 my-6" />
+                  <button onClick={() => handleDeleteStudent(selectedStudent.id)} className="w-full flex items-center justify-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 py-2.5 rounded-xl transition-colors text-sm font-medium">
+                    <Trash2 size={16} /> <span>Delete Student Record</span>
                   </button>
-                </form>
+                </div>
+              )}
 
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center"><CreditCard size={14} className="mr-2" /> Fee History</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                    {selectedStudent.fees?.length > 0 ? (
-                      selectedStudent.fees.map((fee: any) => (
-                        <div key={fee.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
-                          <div>
-                            <p className="text-sm font-medium text-white">{fee.title}</p>
-                            <p className="text-xs text-gray-500">Due: {new Date(fee.dueDate).toLocaleDateString()}</p>
+              {/* TAB: ATTENDANCE */}
+              {profileTab === 'Attendance' && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <form onSubmit={handleMarkAttendance} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+                    <h3 className="text-sm font-medium text-white mb-2">Mark New Attendance</h3>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Date</label>
+                      <input type="date" value={attendanceData.date} onChange={e => setAttendanceData({...attendanceData, date: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm" required />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Subject (Optional)</label>
+                      <input type="text" placeholder="e.g. Physics, Math" value={attendanceData.subject} onChange={e => setAttendanceData({...attendanceData, subject: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm" required />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Status</label>
+                      <select value={attendanceData.status} onChange={e => setAttendanceData({...attendanceData, status: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                        <option value="PRESENT">Present</option>
+                        <option value="ABSENT">Absent</option>
+                        <option value="LATE">Late</option>
+                      </select>
+                    </div>
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl transition-colors text-sm font-medium">
+                      Save Record
+                    </button>
+                  </form>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-400 mb-3 uppercase tracking-wider">Recent History</h3>
+                    {selectedStudent.attendances?.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedStudent.attendances.map((rec: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div>
+                              <p className="text-sm font-medium text-white">{rec.subject}</p>
+                              <p className="text-xs text-gray-500">{new Date(rec.date).toLocaleDateString()}</p>
+                            </div>
+                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${rec.status === 'PRESENT' ? 'bg-emerald-500/20 text-emerald-400' : rec.status === 'ABSENT' ? 'bg-rose-500/20 text-rose-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                              {rec.status}
+                            </span>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-white">${fee.amount}</p>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${fee.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>{fee.status}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : <p className="text-xs text-gray-500 italic">No fees recorded.</p>}
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">No attendance records found.</p>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === 'results' && (
-              <div className="space-y-8 animate-in fade-in">
-                <form onSubmit={(e) => { handlePublishResult(e); setTimeout(fetchStudents, 500); }} className="space-y-5 bg-black/30 p-5 rounded-2xl border border-white/5">
-                  <div className="flex items-center space-x-2 text-purple-400 mb-2"><Award size={18} /><h3 className="font-semibold">Add Academic Record</h3></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase">Exam Name</label>
-                      <input type="text" required value={resultForm.examName} onChange={e => setResultForm({...resultForm, examName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase">Subject</label>
-                      <input type="text" required value={resultForm.subject} onChange={e => setResultForm({...resultForm, subject: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase">Scored</label>
-                      <input type="number" required value={resultForm.marksObtained} onChange={e => setResultForm({...resultForm, marksObtained: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none font-mono" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase">Out of</label>
-                      <input type="number" required value={resultForm.totalMarks} onChange={e => setResultForm({...resultForm, totalMarks: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none font-mono" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase">Grade</label>
-                      <input type="text" required value={resultForm.grade} onChange={e => setResultForm({...resultForm, grade: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none font-mono" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-400 uppercase">Remarks</label>
-                    <textarea value={resultForm.remarks} onChange={e => setResultForm({...resultForm, remarks: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-purple-500/50 outline-none resize-none h-24" />
-                  </div>
-                  <button type="submit" disabled={isSubmitting} className="w-full py-3 mt-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all shadow-[0_0_15px_rgba(147,51,234,0.4)] flex items-center justify-center disabled:opacity-50">
-                    {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
-                    Publish Result
-                  </button>
-                </form>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center"><Award size={14} className="mr-2" /> Academic Records</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                    {selectedStudent.results?.length > 0 ? (
-                      selectedStudent.results.map((res: any) => (
-                        <div key={res.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
-                          <div>
-                            <p className="text-sm font-medium text-white">{res.subject}</p>
-                            <p className="text-xs text-gray-500">{res.examName}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-white">{res.marksObtained}/{res.totalMarks}</p>
-                            <p className="text-xs font-medium text-emerald-400">Grade {res.grade}</p>
-                          </div>
+              {/* TAB: FEES */}
+              {profileTab === 'Fees' && (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  {selectedStudent.fees?.length > 0 ? (
+                    selectedStudent.fees.map((fee: any, i: number) => (
+                      <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-medium text-white text-sm">{fee.title}</p>
+                          <span className={`text-xs px-2 py-1 rounded font-medium ${fee.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                            {fee.status}
+                          </span>
                         </div>
-                      ))
-                    ) : <p className="text-xs text-gray-500 italic">No results recorded.</p>}
-                  </div>
+                        <p className="text-2xl font-bold text-white mb-1">${fee.amount.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">Due: {new Date(fee.dueDate).toLocaleDateString()}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No fee records found.</p>
+                  )}
+                </div>
+              )}
+
+              {/* TAB: RESULTS */}
+              {profileTab === 'Results' && (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  {selectedStudent.results?.length > 0 ? (
+                    selectedStudent.results.map((res: any, i: number) => (
+                      <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-white text-sm">{res.subject}</p>
+                          <p className="text-xs text-gray-500">{res.examName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-white">{res.marksObtained}<span className="text-xs text-gray-500">/{res.totalMarks}</span></p>
+                          <p className={`text-xs font-bold ${res.grade.includes('A') ? 'text-emerald-400' : res.grade.includes('B') ? 'text-blue-400' : 'text-orange-400'}`}>
+                            Grade {res.grade}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No exam results found.</p>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* --- MODALS --- */}
+      
+      {/* 1. Add Single Student Modal */}
+      {isAddStudentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-white">Add Student</h3>
+              <button onClick={() => setIsAddStudentModalOpen(false)} className="text-gray-400 hover:text-white"><X size={18} /></button>
+            </div>
+            <form onSubmit={handleAddStudent} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">First Name</label>
+                  <input type="text" required value={newStudent.firstName} onChange={e => setNewStudent({...newStudent, firstName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Last Name</label>
+                  <input type="text" value={newStudent.lastName} onChange={e => setNewStudent({...newStudent, lastName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-emerald-500 outline-none" />
                 </div>
               </div>
-            )}
-
-            {activeTab === 'attendance' && (
-              <div className="space-y-8 animate-in fade-in">
-                <form onSubmit={handleMarkAttendance} className="space-y-5 bg-black/30 p-5 rounded-2xl border border-white/5">
-                  <div className="flex items-center space-x-2 text-orange-400 mb-2">
-                    <CheckSquare size={18} /><h3 className="font-semibold">Mark Attendance</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase">Date *</label>
-                      <input type="date" required value={attendanceForm.date} onChange={e => setAttendanceForm({...attendanceForm, date: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-2.5 px-3 text-white focus:border-orange-500/50 outline-none text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase">Subject</label>
-                      <input type="text" required value={attendanceForm.subject} onChange={e => setAttendanceForm({...attendanceForm, subject: e.target.value})} placeholder="e.g. Overall, Physics" className="w-full bg-black/50 border border-white/10 rounded-xl py-2.5 px-3 text-white focus:border-orange-500/50 outline-none text-sm" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-400 uppercase">Status *</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      <button type="button" onClick={() => setAttendanceForm({...attendanceForm, status: 'PRESENT'})} className={`py-2 rounded-xl border text-sm font-medium transition-all ${attendanceForm.status === 'PRESENT' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5'}`}>Present</button>
-                      <button type="button" onClick={() => setAttendanceForm({...attendanceForm, status: 'LATE'})} className={`py-2 rounded-xl border text-sm font-medium transition-all ${attendanceForm.status === 'LATE' ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5'}`}>Late</button>
-                      <button type="button" onClick={() => setAttendanceForm({...attendanceForm, status: 'ABSENT'})} className={`py-2 rounded-xl border text-sm font-medium transition-all ${attendanceForm.status === 'ABSENT' ? 'bg-rose-500/20 border-rose-500 text-rose-400' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5'}`}>Absent</button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 pt-2">
-                    <label className="text-xs font-medium text-gray-400 uppercase">Remarks (Optional)</label>
-                    <input type="text" value={attendanceForm.remarks} onChange={e => setAttendanceForm({...attendanceForm, remarks: e.target.value})} placeholder="e.g. Doctor's appointment" className="w-full bg-black/50 border border-white/10 rounded-xl py-2.5 px-3 text-white focus:border-orange-500/50 outline-none text-sm" />
-                  </div>
-
-                  <button type="submit" disabled={isSubmitting} className="w-full py-3 mt-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-medium transition-all shadow-[0_0_15px_rgba(249,115,22,0.4)] flex items-center justify-center disabled:opacity-50">
-                    {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <CheckSquare size={16} className="mr-2" />}
-                    Save Attendance
-                  </button>
-                </form>
-
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Email</label>
+                <input type="email" required value={newStudent.email} onChange={e => setNewStudent({...newStudent, email: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-emerald-500 outline-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center"><CheckSquare size={14} className="mr-2" /> Recent Attendance</h3>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                    {selectedStudent.attendance?.length > 0 ? (
-                      selectedStudent.attendance.map((att: any) => (
-                        <div key={att.id} className="flex justify-between items-center p-3 bg-white/5 rounded-xl border border-white/5">
-                          <div>
-                            <p className="text-sm font-medium text-white">{new Date(att.date).toLocaleDateString()}</p>
-                            <p className="text-xs text-gray-500">{att.subject}</p>
-                          </div>
-                          <div>
-                            <span className={`text-[10px] px-2 py-1 rounded-md font-medium uppercase ${
-                              att.status === 'PRESENT' ? 'bg-emerald-500/20 text-emerald-400' : 
-                              att.status === 'LATE' ? 'bg-yellow-500/20 text-yellow-400' : 
-                              'bg-rose-500/20 text-rose-400'
-                            }`}>{att.status}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : <p className="text-xs text-gray-500 italic">No attendance recorded.</p>}
-                  </div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Roll No</label>
+                  <input type="text" required value={newStudent.rollNo} onChange={e => setNewStudent({...newStudent, rollNo: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-emerald-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Class (e.g. 10-A)</label>
+                  <input type="text" required value={newStudent.className} onChange={e => setNewStudent({...newStudent, className: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-emerald-500 outline-none" />
                 </div>
               </div>
-            )}
-
+              <button type="submit" className="w-full bg-emerald-600 text-white rounded-xl py-3 mt-2 text-sm font-bold hover:bg-emerald-500 transition-all">Add Student</button>
+            </form>
           </div>
         </div>
+      )}
+
+      {/* 2. Build Schedule Modal */}
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-white">Add Class Period</h3>
+              <button onClick={() => setIsScheduleModalOpen(false)} className="text-gray-400 hover:text-white"><X size={18} /></button>
+            </div>
+            <form onSubmit={handleBuildSchedule} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Class (e.g. 10-A)</label>
+                  <input type="text" required value={scheduleData.className} onChange={e => setScheduleData({...scheduleData, className: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Day of Week</label>
+                  <select required value={scheduleData.dayOfWeek} onChange={e => setScheduleData({...scheduleData, dayOfWeek: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-blue-500 outline-none">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Subject</label>
+                <input type="text" required placeholder="e.g. Mathematics" value={scheduleData.subject} onChange={e => setScheduleData({...scheduleData, subject: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-blue-500 outline-none" />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Room</label>
+                  <input type="text" required value={scheduleData.room} onChange={e => setScheduleData({...scheduleData, room: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Start</label>
+                  <input type="time" required value={scheduleData.startTime} onChange={e => setScheduleData({...scheduleData, startTime: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-2 py-2.5 text-white focus:border-blue-500 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">End</label>
+                  <input type="time" required value={scheduleData.endTime} onChange={e => setScheduleData({...scheduleData, endTime: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl px-2 py-2.5 text-white focus:border-blue-500 outline-none text-sm" />
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-blue-600 text-white rounded-xl py-3 mt-2 text-sm font-bold hover:bg-blue-500 transition-all">Save Schedule Period</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Upload Timetable Modal */}
+      {isTimetableModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-white">Upload Timetable PDF</h3>
+              <button onClick={() => setIsTimetableModalOpen(false)} className="text-gray-400 hover:text-white"><X size={18} /></button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Target Class (e.g. 10-A)</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Enter class name first"
+                  value={timetableClass}
+                  onChange={(e) => setTimetableClass(e.target.value)}
+                  className="w-full bg-black/50 border border-blue-500/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {timetableClass ? (
+                <div className="bg-black/40 rounded-2xl border border-white/5 p-4 animate-in zoom-in-95">
+                  <UploadDropzone
+                    endpoint="timetableUploader" 
+                    onClientUploadComplete={(res: { url: string; }[]) => handleTimetableUploadComplete(res[0].url)}
+                    onUploadError={(error: Error) => alert(`ERROR! ${error.message}`)}
+                    appearance={{
+                      container: "border-dashed border-white/20 hover:border-blue-500/50 transition-colors p-6",
+                      uploadIcon: "text-blue-400 h-8 w-8 mb-2",
+                      label: "text-white text-sm hover:text-blue-400",
+                      button: "bg-blue-600 hover:bg-blue-700 w-full mt-4"
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center bg-black/20">
+                   <p className="text-sm text-gray-500">Please enter a target class name above to enable the upload zone.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Bulk Upload Modal */}
+      {isBulkUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-white">Bulk Upload</h3>
+                <p className="text-sm text-gray-400">Upload an Excel (.xlsx) file.</p>
+              </div>
+              <button onClick={() => setIsBulkUploadModalOpen(false)} className="text-gray-400 hover:text-white"><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleBulkUpload} className="space-y-5">
+              <div className="border-2 border-dashed border-white/20 rounded-2xl p-8 text-center hover:bg-white/5 transition-colors relative">
+                <input 
+                  type="file" accept=".xlsx, .xls, .csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required
+                />
+                <UploadCloud className="mx-auto text-emerald-500 mb-3" size={32} />
+                <p className="text-sm font-medium text-white mb-1">{bulkFile ? bulkFile.name : "Click or drag file to upload"}</p>
+                <p className="text-xs text-gray-500">Required columns: email, rollNo, firstName</p>
+              </div>
+
+              <button type="submit" disabled={isUploadingBulk || !bulkFile} className="w-full bg-emerald-600 text-white rounded-xl py-3.5 text-sm font-bold hover:bg-emerald-500 transition-all flex items-center justify-center space-x-2 disabled:opacity-50">
+                {isUploadingBulk ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <span>Start Import</span>}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Create Assignment Modal Overlay */}
+      {isAssignmentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200 shadow-2xl">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-white">New Assignment</h3>
+                <p className="text-sm text-gray-400">Push a task to the student portal.</p>
+              </div>
+              <button 
+                onClick={() => setIsAssignmentModalOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAssignment} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Target Class</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g., 10-A, 9-B"
+                  value={newAssignment.className}
+                  onChange={(e) => setNewAssignment({...newAssignment, className: e.target.value})}
+                  className="w-full bg-black/50 border border-emerald-500/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder-gray-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Subject Name</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g., Physics, Mathematics"
+                  value={newAssignment.subject}
+                  onChange={(e) => setNewAssignment({...newAssignment, subject: e.target.value})}
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-gray-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Assignment Title</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g., Lab Report 4"
+                  value={newAssignment.title}
+                  onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})}
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all placeholder-gray-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Instructions</label>
+                <textarea 
+                  rows={3}
+                  placeholder="Provide submission guidelines..."
+                  value={newAssignment.description}
+                  onChange={(e) => setNewAssignment({...newAssignment, description: e.target.value})}
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-none placeholder-gray-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Due Date</label>
+                <input 
+                  type="date" 
+                  required
+                  value={newAssignment.dueDate}
+                  onChange={(e) => setNewAssignment({...newAssignment, dueDate: e.target.value})}
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl py-3.5 text-sm font-bold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center space-x-2"
+                >
+                  <BookOpen size={18} />
+                  <span>Publish Task</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Backdrop for Super Profile */}
+      {isProfileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsProfileOpen(false)}
+        />
       )}
 
     </div>
