@@ -5,9 +5,10 @@ import {
   LayoutDashboard, BookOpen, Settings, LogOut, ShieldCheck, Mail, Lock,
   MoreHorizontal, CreditCard, Award, ChevronRight, Calendar
 } from 'lucide-react';
+// NEW: Import the UploadButton we just created!
+import { UploadButton } from "@/lib/uploadthing";
 
 export default function AdminDashboard() {
-  // --- CORE STATE ---
   const [students, setStudents] = useState<any[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,11 +29,13 @@ export default function AdminDashboard() {
     firstName: '', lastName: '', email: '', password: '', 
     rollNo: '', gradeLevel: '10th', section: 'A', className: ''
   });
-  const [timetableForm, setTimetableForm] = useState({ className: '', timetableUrl: '' });
+  
+  // Notice we removed the URL input! UploadThing handles it now.
+  const [timetableForm, setTimetableForm] = useState({ className: '' });
+  
   const [feeForm, setFeeForm] = useState({ title: '', amount: '', dueDate: '' });
   const [resultForm, setResultForm] = useState({ examName: 'Mid-Term 2026', subject: '', marksObtained: '', totalMarks: '100', grade: '', remarks: '' });
 
-  // --- API CALLS ---
   const fetchStudents = async () => {
     setIsLoadingStudents(true);
     try {
@@ -94,28 +97,6 @@ export default function AdminDashboard() {
         setFormData({ firstName: '', lastName: '', email: '', password: '', rollNo: '', gradeLevel: '10th', section: 'A', className: '' });
         fetchStudents();
       } else alert(`Failed to add student: ${data.error}`);
-    } catch (error) {
-      alert("A network error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleTimetableSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/api/admin/classes/timetable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(timetableForm),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Timetable successfully linked to class!");
-        setIsTimetableModalOpen(false);
-        setTimetableForm({ className: '', timetableUrl: '' });
-      } else alert(`Failed to link timetable: ${data.error}`);
     } catch (error) {
       alert("A network error occurred. Please try again.");
     } finally {
@@ -222,7 +203,7 @@ export default function AdminDashboard() {
                 className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium text-white shadow-lg"
               >
                 <Calendar size={16} className="text-blue-400" />
-                <span>Link Timetable</span>
+                <span>Upload Timetable</span>
               </button>
 
               <button 
@@ -254,7 +235,6 @@ export default function AdminDashboard() {
             />
           </div>
 
-          {/* THE DATA TABLE */}
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[800px]">
@@ -330,9 +310,6 @@ export default function AdminDashboard() {
         </div>
       </main>
 
-      {/* --- MODALS & PANELS BELOW --- */}
-
-      {/* 1. ADD STUDENT MODAL */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#111111] border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
@@ -399,38 +376,83 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 2. TIMETABLE MODAL */}
       {isTimetableModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#111111] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
               <h2 className="text-lg font-semibold text-white flex items-center">
-                <Calendar className="mr-2 text-blue-400" size={20} /> Link Timetable
+                <Calendar className="mr-2 text-blue-400" size={20} /> Upload Timetable (Cloud)
               </h2>
               <button onClick={() => setIsTimetableModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
             </div>
-            <form onSubmit={handleTimetableSubmit} className="p-6 space-y-6">
+            
+            <div className="p-6 space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-400 uppercase">Class Name *</label>
-                <input type="text" required value={timetableForm.className} onChange={(e) => setTimetableForm({...timetableForm, className: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-blue-500/50 outline-none" placeholder="e.g. 10-A" />
+                <input 
+                  type="text" 
+                  required 
+                  value={timetableForm.className} 
+                  onChange={(e) => setTimetableForm({ className: e.target.value })} 
+                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-blue-500/50 outline-none" 
+                  placeholder="e.g. 10-A" 
+                />
+                <p className="text-xs text-gray-500 mt-1">Make sure you type the class name before uploading.</p>
               </div>
+
+              {/* NEW: UploadThing React Component! */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-400 uppercase">Timetable URL *</label>
-                <input type="url" required value={timetableForm.timetableUrl} onChange={(e) => setTimetableForm({...timetableForm, timetableUrl: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-blue-500/50 outline-none" placeholder="https://..." />
+                <label className="text-xs font-medium text-gray-400 uppercase">Timetable File (PDF or Image)</label>
+                <div className="border-2 border-dashed border-white/10 rounded-xl p-4 flex justify-center bg-black/20 hover:bg-black/40 transition-colors">
+                  <UploadButton
+                    endpoint="timetableUploader"
+                    onClientUploadComplete={async (res) => {
+                      if (!timetableForm.className) {
+                         alert("Please enter a Class Name before uploading!");
+                         return;
+                      }
+                      
+                      // 1. Get the secure Cloud URL
+                      const fileUrl = res[0].url;
+                      
+                      // 2. Send it to our backend to save in the Database
+                      try {
+                        const apiRes = await fetch('/api/admin/classes/timetable', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ 
+                            className: timetableForm.className, 
+                            timetableUrl: fileUrl 
+                          }),
+                        });
+                        const data = await apiRes.json();
+                        if (data.success) {
+                          alert("Timetable securely uploaded and linked to class!");
+                          setIsTimetableModalOpen(false);
+                          setTimetableForm({ className: '' });
+                        } else {
+                          alert(`Database Error: ${data.error}`);
+                        }
+                      } catch (err) {
+                        alert("Failed to save to database.");
+                      }
+                    }}
+                    onUploadError={(error: Error) => {
+                      alert(`Upload Failed: ${error.message}`);
+                    }}
+                    appearance={{
+                       button: "bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl px-8",
+                       allowedContent: "text-gray-400 text-xs mt-2"
+                    }}
+                  />
+                </div>
               </div>
-              <div className="pt-4 border-t border-white/10 flex justify-end space-x-3">
-                <button type="button" onClick={() => setIsTimetableModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all shadow-lg flex items-center disabled:opacity-50">
-                  {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : null}
-                  {isSubmitting ? 'Saving...' : 'Link Timetable'}
-                </button>
-              </div>
-            </form>
+            </div>
+
           </div>
         </div>
       )}
 
-      {/* 3. STUDENT ACTION SIDE PANEL */}
       {isActionPanelOpen && selectedStudent && (
         <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[#111111]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
           <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">

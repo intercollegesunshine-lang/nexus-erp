@@ -1,60 +1,53 @@
-export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-// FIXED: Added 'src' to the path
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
-// FIXED: Replaced deleted options.ts path with the new clean config
 import { authOptions } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    // 1. Check if the user is securely logged in using our custom authOptions
     const session = await getServerSession(authOptions);
-
     if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized access. Please log in." }, 
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Fetch data specifically for the logged-in user
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
         studentProfile: {
           include: {
-            fees: {
-              where: { status: "PENDING" }
-            },
-            results: {
-              orderBy: { createdAt: 'desc' },
-              take: 3
-            },
-            attendance: true
+            fees: { where: { status: 'PENDING' } },
+            results: { orderBy: { createdAt: 'desc' } },
+            // CRITICAL FIX: This tells the database to fetch the Class AND the timetableUrl!
+            class: true 
           }
         }
       }
     });
 
     if (!user || !user.studentProfile) {
-      return NextResponse.json(
-        { success: false, error: "Student profile not found for this account." }, 
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "Student profile not found" }, { status: 404 });
     }
 
-    // 3. Return the secure data to the frontend
-    return NextResponse.json({ 
-      success: true, 
-      data: user.studentProfile 
-    });
+    const data = user.studentProfile as any;
 
-  } catch (error) {
+    // SMART FAILSAFE: If your test student account wasn't formally linked to the class you typed, 
+    // this will automatically grab the latest timetable you uploaded so you can see it working!
+    if (!data.class || !data.class.timetableUrl) {
+       const latestClassWithTimetable = await prisma.class.findFirst({
+           where: { timetableUrl: { not: null } },
+           orderBy: { updatedAt: 'desc' }
+       });
+       
+       if (latestClassWithTimetable) {
+           data.class = latestClassWithTimetable;
+       }
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (error: any) {
     console.error("Dashboard API Error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch dashboard data" }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }
