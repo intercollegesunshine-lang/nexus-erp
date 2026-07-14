@@ -5,17 +5,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "postgresql" // Updated for your Neon Cloud Database!
   url      = env("DATABASE_URL")
 }
 
-// Core User Model for Authentication
+// 1. Core User Model for Authentication
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   passwordHash  String
   
-  // Changed from enum to String for SQLite compatibility
   role          String    @default("STUDENT") 
   
   createdAt     DateTime  @default(now())
@@ -24,11 +23,30 @@ model User {
   studentProfile StudentProfile?
 }
 
-// Student Specific Data
+// 2. NEW: Class Model (Handles Timetables and Grouping)
+model Class {
+  id            String          @id @default(cuid())
+  name          String          @unique // e.g., "10-A", "11-Science"
+  timetableUrl  String?         // URL to the uploaded timetable image/PDF
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  // A Class has many Students
+  students      StudentProfile[]
+}
+
+// 3. Student Specific Data
 model StudentProfile {
   id            String    @id @default(cuid())
+  
+  // Foreign Keys
   userId        String    @unique
+  classId       String?   // NEW: Optional link to a Class
+  
+  // Relations
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  class         Class?    @relation(fields: [classId], references: [id], onDelete: SetNull)
   
   enrollmentNo  String    @unique
   firstName     String
@@ -46,7 +64,7 @@ model StudentProfile {
   updatedAt     DateTime  @updatedAt
 }
 
-// Fee Management System
+// 4. Fee Management System
 model FeeInvoice {
   id            String        @id @default(cuid())
   studentId     String
@@ -56,7 +74,6 @@ model FeeInvoice {
   amount        Float
   dueDate       DateTime
   
-  // Changed from enum to String for SQLite compatibility
   status        String        @default("PENDING") 
   
   payments      Payment[]
@@ -74,7 +91,7 @@ model Payment {
   paymentMethod String     // e.g., "STRIPE", "RAZORPAY", "UPI"
 }
 
-// Result & Academic Management
+// 5. Result & Academic Management
 model ExamResult {
   id            String         @id @default(cuid())
   studentId     String
@@ -90,7 +107,7 @@ model ExamResult {
   createdAt     DateTime       @default(now())
 }
 
-// Attendance Tracking
+// 6. Attendance Tracking
 model Attendance {
   id            String         @id @default(cuid())
   studentId     String
