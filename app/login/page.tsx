@@ -5,9 +5,9 @@ import { Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 // --- MOCK ENVIRONMENT SETUP ---
 // We mock these Next.js specific functions so the UI compiles in this environment.
 // In your actual Next.js project, you should use the real imports:
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Instrument_Serif, Inter } from 'next/font/google';
+//import { signIn } from 'next-auth/react';
+//import { useRouter } from 'next/navigation';
+//import { Instrument_Serif, Inter } from 'next/font/google';
 
 const signIn = async (provider: string, options: any) => {
   console.log(`Mock sign in via ${provider}`);
