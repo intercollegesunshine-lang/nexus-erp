@@ -32,7 +32,6 @@ const FloatingCrystals = () => (
       <directionalLight position={[-10, -10, -10]} intensity={1} color="#8b5cf6" />
       <directionalLight position={[0, -10, 0]} intensity={1.5} color="#f59e0b" />
       
-      {/* Large Crystal */}
       <Float speed={2} rotationIntensity={1} floatIntensity={2}>
         <mesh position={[5, 3, -5]} scale={2.5}>
           <sphereGeometry args={[1, 64, 64]} />
@@ -40,7 +39,6 @@ const FloatingCrystals = () => (
         </mesh>
       </Float>
       
-      {/* Distorted Crystal */}
       <Float speed={1.5} rotationIntensity={1.5} floatIntensity={1.5}>
         <mesh position={[-6, -3, -8]} scale={3.5}>
           <sphereGeometry args={[1, 64, 64]} />
@@ -48,7 +46,6 @@ const FloatingCrystals = () => (
         </mesh>
       </Float>
       
-      {/* Sparkles */}
       {Array.from({ length: 20 }).map((_, i) => (
         <Float key={i} speed={2 + Math.random() * 2} floatIntensity={3} rotationIntensity={2}>
           <Sphere args={[0.03, 16, 16]} position={[(Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, -5 - Math.random() * 10]}>
@@ -72,21 +69,23 @@ const GlassCard = ({ children, className = "", hover = false }: { children: Reac
   </div>
 );
 
-const MetricCard = ({ title, value, subtitle, icon: Icon, colorClass, alert = false }: { title: string, value: string | React.ReactNode, subtitle?: string, icon: any, colorClass: string, alert?: boolean }) => (
-  <GlassCard hover className="relative overflow-hidden group flex flex-col justify-between min-h-[150px]">
-    <div className="flex justify-between items-start mb-2">
-      <div className={`p-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-[#1E1B4B]`}>
-        <Icon size={24} className={`${alert ? 'text-orange-500 animate-pulse' : 'opacity-80'}`} />
+const MetricCard = ({ title, value, subtitle, icon: Icon, colorClass, alert = false, href }: { title: string, value: string | React.ReactNode, subtitle?: string, icon: any, colorClass: string, alert?: boolean, href?: string }) => (
+  <button onClick={() => href && (window.location.href = href)} className="text-left w-full">
+    <GlassCard hover className="relative overflow-hidden group flex flex-col justify-between min-h-[150px]">
+      <div className="flex justify-between items-start mb-2">
+        <div className={`p-3 rounded-2xl bg-white border border-gray-100 shadow-sm text-[#1E1B4B]`}>
+          <Icon size={24} className={`${alert ? 'text-orange-500 animate-pulse' : 'opacity-80'}`} />
+        </div>
       </div>
-    </div>
-    <div>
-      <h3 className="text-gray-500 text-xs font-bold mb-1 tracking-wider uppercase">{title}</h3>
-      <div className="flex items-baseline space-x-2">
-        <p className={`${instrumentSerif.className} text-4xl text-[#1E1B4B] tracking-tight`}>{value}</p>
-        {subtitle && <span className={`text-sm ${alert ? 'text-orange-600 font-medium' : 'text-gray-400'}`}>{subtitle}</span>}
+      <div>
+        <h3 className="text-gray-500 text-xs font-bold mb-1 tracking-wider uppercase">{title}</h3>
+        <div className="flex items-baseline space-x-2">
+          <p className={`${instrumentSerif.className} text-4xl text-[#1E1B4B] tracking-tight`}>{value}</p>
+          {subtitle && <span className={`text-sm ${alert ? 'text-orange-600 font-medium' : 'text-gray-400'}`}>{subtitle}</span>}
+        </div>
       </div>
-    </div>
-  </GlassCard>
+    </GlassCard>
+  </button>
 );
 
 export default function StudentApp() {
@@ -99,13 +98,8 @@ export default function StudentApp() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // PERMANENT FIX: Force browser to fetch fresh data every time
         const response = await fetch('/api/student/dashboard', {
-          headers: { 
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          }
+          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
         });
 
         if (response.status === 401) {
@@ -162,7 +156,6 @@ export default function StudentApp() {
     );
   }
 
-  // --- MATH FIX: Calculate TOTAL sum of all pending fees! ---
   const pendingFeesList = studentData.fees?.filter((f:any) => f.status === 'PENDING') || [];
   const totalPendingFees = pendingFeesList.reduce((sum: number, fee: any) => sum + fee.amount, 0);
 
@@ -184,13 +177,11 @@ export default function StudentApp() {
       
       <FloatingCrystals />
       
-      {/* Sidebar Overlay */}
       <div 
         className={`fixed inset-0 bg-[#1E1B4B]/20 backdrop-blur-sm z-40 transition-all duration-500 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} 
         onClick={() => setSidebarOpen(false)} 
       />
 
-      {/* Floating Sidebar Drawer */}
       <aside className={`fixed z-50 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] top-4 bottom-4 left-4 w-72 rounded-[2.5rem] border border-white bg-white/70 backdrop-blur-3xl shadow-2xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-[120%]'} flex flex-col justify-between`}>
         <div>
           <div className="p-8 flex items-center justify-between">
@@ -229,10 +220,8 @@ export default function StudentApp() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 h-screen overflow-y-auto relative z-10 scroll-smooth">
         
-        {/* Header */}
         <header className="sticky top-6 z-30 mx-6 sm:mx-10 max-w-7xl xl:mx-auto bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex items-center space-x-4">
             <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-2xl bg-white border border-gray-100 text-[#1E1B4B] hover:bg-purple-50 hover:text-purple-700 transition-colors shadow-sm"><Menu size={20} /></button>
@@ -269,7 +258,6 @@ export default function StudentApp() {
           </div>
         </header>
 
-        {/* Dashboard Content */}
         <div className="p-6 sm:p-10 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out">
           
           <div className="mb-8">
@@ -279,17 +267,10 @@ export default function StudentApp() {
             <p className="text-gray-500 font-medium">Your academic overview for today.</p>
           </div>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {studentData.class?.schedules?.[0] ? (
-               <MetricCard title="Next Class" value={studentData.class.schedules[0].subject} subtitle={`at ${studentData.class.schedules[0].startTime}`} icon={Clock} colorClass="from-blue-100 to-indigo-100" />
-            ) : (
-               <MetricCard title="Next Class" value="Free Time" subtitle="No classes today" icon={Clock} colorClass="from-gray-100 to-gray-200" />
-            )}
-            
-            <MetricCard title="Overall Grade" value="A-" subtitle="Excellent Standing" icon={Award} colorClass="from-emerald-100 to-teal-100" />
-            <MetricCard title="Attendance" value="94%" subtitle="This Semester" icon={CheckCircle2} colorClass="from-purple-100 to-pink-100" />
-            
+            <MetricCard title="Next Class" value={studentData.class?.schedules?.[0]?.subject || "Free Time"} subtitle={studentData.class?.schedules?.[0]?.startTime ? `at ${studentData.class.schedules[0].startTime}` : "No classes today"} icon={Clock} colorClass="from-blue-100 to-indigo-100" href="/attendance" />
+            <MetricCard title="Overall Grade" value="A-" subtitle="Excellent Standing" icon={Award} colorClass="from-emerald-100 to-teal-100" href="/academics" />
+            <MetricCard title="Attendance" value="94%" subtitle="This Semester" icon={CheckCircle2} colorClass="from-purple-100 to-pink-100" href="/attendance" />
             <MetricCard 
               title="Fees Due" 
               value={totalPendingFees > 0 ? `$${totalPendingFees.toLocaleString()}` : "$0"} 
@@ -297,13 +278,12 @@ export default function StudentApp() {
               icon={CreditCard} 
               colorClass="from-orange-100 to-rose-100" 
               alert={totalPendingFees > 0} 
+              href="/fees"
             />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
-            
             <div className="lg:col-span-2 space-y-8">
-              {/* Academics */}
               <GlassCard>
                 <div className="flex justify-between items-center mb-8">
                   <h3 className={`${instrumentSerif.className} text-3xl text-[#1E1B4B]`}>Recent Results</h3>
@@ -311,7 +291,6 @@ export default function StudentApp() {
                     View Transcripts <ChevronRight size={16} className="ml-1" />
                   </button>
                 </div>
-                
                 <div className="space-y-4">
                   {studentData.results && studentData.results.length > 0 ? (
                     studentData.results.slice(0, 3).map((exam: any, i: number) => (
@@ -337,7 +316,6 @@ export default function StudentApp() {
                 </div>
               </GlassCard>
 
-              {/* Assignments */}
               <GlassCard>
                 <div className="flex items-center justify-between mb-8">
                   <h3 className={`${instrumentSerif.className} text-3xl text-[#1E1B4B] flex items-center gap-3`}>
@@ -345,7 +323,6 @@ export default function StudentApp() {
                     Pending Assignments
                   </h3>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {pendingAssignments.length > 0 ? (
                     pendingAssignments.slice(0, 4).map((assignment: any) => {
@@ -376,13 +353,10 @@ export default function StudentApp() {
               </GlassCard>
             </div>
 
-            {/* Right Column: Financials & Schedule */}
             <div className="space-y-8">
-              
               <GlassCard className={`${totalPendingFees > 0 ? 'border-orange-200 shadow-[0_8px_30px_rgba(249,115,22,0.1)]' : ''} relative overflow-hidden`}>
                 <div className={`absolute top-0 right-0 w-40 h-40 ${totalPendingFees > 0 ? 'bg-orange-100/50' : 'bg-gray-50'} rounded-bl-full -z-10 blur-xl`} />
                 <h3 className={`${instrumentSerif.className} text-3xl text-[#1E1B4B] mb-6`}>Financial Hub</h3>
-                
                 {totalPendingFees > 0 ? (
                   <>
                     <div className="bg-white rounded-2xl p-6 border border-gray-100 mb-6 shadow-sm">
