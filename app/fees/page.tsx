@@ -33,7 +33,10 @@ export default function FeesPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/student/dashboard').then(res => res.json()).then(json => { 
+    // CACHE BUSTING headers added here as well!
+    fetch('/api/student/dashboard', {
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
+    }).then(res => res.json()).then(json => { 
       if(json.success) setStudentData(json.data); 
       setIsLoading(false);
     });

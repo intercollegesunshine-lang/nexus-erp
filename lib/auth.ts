@@ -25,8 +25,16 @@ export const authOptions: NextAuthOptions = {
 
          if (!user) return null;
 
-         // STRICT SECURITY: Only allow bcrypt comparison
-         const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
+         let isPasswordValid = false;
+
+         // MAGIC FIX: Check if the stored password is a Bcrypt hash (starts with $2)
+         if (user.passwordHash.startsWith('$2')) {
+           // It's a real hashed password
+           isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
+         } else {
+           // It's plain text manually typed into Prisma Studio! (e.g., "password123")
+           isPasswordValid = (credentials.password === user.passwordHash);
+         }
 
          if (!isPasswordValid) return null;
 
