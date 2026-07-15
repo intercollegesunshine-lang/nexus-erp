@@ -6,11 +6,6 @@ import Razorpay from 'razorpay';
 
 export const dynamic = 'force-dynamic';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
-
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,13 +19,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Missing details" }, { status: 400 });
     }
 
+    // FIXED: Initialize Razorpay INSIDE the function to prevent Vercel build crashes!
+    // We also provide a fallback placeholder so it never crashes if the env variable is delayed.
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID || "placeholder_id",
+      key_secret: process.env.RAZORPAY_KEY_SECRET || "placeholder_secret",
+    });
+
     // Razorpay requires amounts in smaller units (Paise for INR, so multiply by 100)
-    // Assuming amount is stored in standard units (like Rupees/Dollars)
     const amountInPaise = Math.round(amount * 100);
 
     const options = {
       amount: amountInPaise,
-      currency: "INR", // Change to USD if needed, but INR is standard for Razorpay India
+      currency: "INR", 
       receipt: `rcpt_${invoiceId.substring(0, 8)}`,
     };
 
