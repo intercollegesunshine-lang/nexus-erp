@@ -5,7 +5,7 @@ import {
   MoreVertical, Plus, Upload, Calendar, X, 
   CheckCircle2, AlertCircle, FileText, Download,
   Trash2, Edit3, ArrowRight, Clock, Zap, UploadCloud, 
-  DollarSign, Award, Building, CalendarDays, BellRing, ShieldAlert, Save
+  DollarSign, Award, Building, CalendarDays, BellRing, ShieldAlert, Save, Menu // <-- Added Menu icon here
 } from 'lucide-react';
 
 import { UploadDropzone } from "@/lib/uploadthing";
@@ -100,7 +100,6 @@ export default function AdminDashboard() {
   }, []);
 
   // --- UI Action Handlers ---
-
   const handleBulkUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bulkFile) return;
@@ -271,6 +270,63 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
+  const [editingRecord, setEditingRecord] = useState<{id: string, type: string} | null>(null);
+  const [editRecordData, setEditRecordData] = useState<any>({});
+
+  const handleSaveEditedRecord = async (type: 'fee' | 'result' | 'attendance') => {
+    try {
+      const res = await fetch(`/api/admin/records/${type}/${editingRecord!.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editRecordData)
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setEditingRecord(null);
+        const updatedProfileRes = await fetch('/api/admin/students');
+        const studentsData = await updatedProfileRes.json();
+        if (studentsData.success) {
+           setStudents(studentsData.data);
+           const updated = studentsData.data.find((s:any) => s.id === selectedStudent.id);
+           if (updated) setSelectedStudent(updated);
+        }
+      } else {
+        alert("Failed to update: " + data.error);
+      }
+    } catch (error) {
+      alert("Network error.");
+    }
+  };
+
+  const handleDeleteRecord = async (type: 'fee' | 'result' | 'attendance' | 'schedule', id: string) => {
+    if (!confirm(`Are you sure you want to delete this ${type} record? This cannot be undone.`)) return;
+    
+    try {
+      const res = await fetch(`/api/admin/records/${type}/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      
+      if (data.success) {
+        if (type !== 'schedule' && selectedStudent) {
+            const updatedProfileRes = await fetch('/api/admin/students');
+            const studentsData = await updatedProfileRes.json();
+            if (studentsData.success) {
+               setStudents(studentsData.data);
+               const updated = studentsData.data.find((s:any) => s.id === selectedStudent.id);
+               if (updated) setSelectedStudent(updated);
+            }
+        } else {
+           fetchData();
+        }
+      } else {
+        alert("Failed to delete: " + data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error occurred.");
+    }
+  };
+
   const handleAssignFee = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feeData.studentId) return alert("Please select a student from the dropdown!");
@@ -331,7 +387,6 @@ export default function AdminDashboard() {
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingSettings(true);
-    // Simulate API call for settings
     setTimeout(() => {
       setIsSavingSettings(false);
       alert("System configurations successfully updated!");
@@ -358,10 +413,18 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-black text-white flex overflow-hidden font-sans selection:bg-indigo-500/30">
       
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden" 
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* --- Sidebar --- */}
       <aside className={`
         fixed lg:relative z-40 h-screen transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
-        ${isSidebarOpen ? 'w-72' : 'w-0 lg:w-24'} 
+        ${isSidebarOpen ? 'w-72 translate-x-0' : '-translate-x-full lg:translate-x-0 w-0 lg:w-24'} 
         bg-zinc-950/80 backdrop-blur-2xl border-r border-white/10 flex flex-col
       `}>
         <div className="p-6 flex items-center justify-between">
@@ -403,36 +466,41 @@ export default function AdminDashboard() {
       {/* --- Main Content --- */}
       <main className="flex-1 h-screen overflow-y-auto relative z-10 scroll-smooth bg-gradient-to-br from-black via-zinc-950 to-black">
         
+        {/* Mobile Header Toggle (Only visible on small screens when sidebar is closed) */}
+        {!isSidebarOpen && (
+           <div className="lg:hidden p-4 sticky top-0 z-20 bg-black/40 backdrop-blur-md border-b border-white/10">
+              <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-colors">
+                <Menu size={20} />
+              </button>
+           </div>
+        )}
+
         {/* --- Directory Tab --- */}
         {activeTab === 'Directory' && (
-          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Student Directory</h1>
-                <p className="text-gray-400">Manage student profiles, enrollments, and schedules.</p>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Student Directory</h1>
+                <p className="text-gray-400 text-sm sm:text-base">Manage student profiles, enrollments, and schedules.</p>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <button 
-                  onClick={() => setIsScheduleModalOpen(true)}
-                  className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl border border-white/10 transition-colors text-sm font-medium"
-                >
-                  <Calendar size={16} /> <span>Build Schedule</span>
-                </button>
+              
+              {/* FIXED BUTTON LAYOUT */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <button 
                   onClick={() => setIsTimetableModalOpen(true)}
-                  className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl border border-white/10 transition-colors text-sm font-medium"
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl transition-colors text-sm font-medium shadow-lg shadow-blue-500/20 w-full sm:w-auto justify-center"
                 >
                   <Calendar size={16} /> <span>Upload Timetable</span>
                 </button>
                 <button 
                   onClick={() => setIsBulkUploadModalOpen(true)} 
-                  className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl border border-white/10 transition-colors text-sm font-medium"
+                  className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2.5 rounded-xl border border-white/10 transition-colors text-sm font-medium w-full sm:w-auto justify-center"
                 >
                   <Upload size={16} /> <span>Bulk Upload</span>
                 </button>
                 <button 
                   onClick={() => setIsAddStudentModalOpen(true)}
-                  className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl transition-colors text-sm font-medium shadow-lg shadow-emerald-500/20"
+                  className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl transition-colors text-sm font-medium shadow-lg shadow-emerald-500/20 w-full sm:w-auto justify-center mt-2 sm:mt-0"
                 >
                   <Plus size={16} /> <span>Add Student</span>
                 </button>
@@ -450,9 +518,9 @@ export default function AdminDashboard() {
               />
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-xl">
+            <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden backdrop-blur-xl">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead>
                     <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider border-b border-white/10">
                       <th className="p-4 font-medium">Roll No</th>
@@ -504,16 +572,16 @@ export default function AdminDashboard() {
 
         {/* --- Assignments Tab --- */}
         {activeTab === 'Assignments' && (
-          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Assignment Manager</h1>
-                <p className="text-gray-400">Create tasks and grade student submissions.</p>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Assignment Manager</h1>
+                <p className="text-gray-400 text-sm sm:text-base">Create tasks and grade student submissions.</p>
               </div>
               
               <button 
                 onClick={() => setIsAssignmentModalOpen(true)}
-                className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-purple-500/25 font-medium"
+                className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-purple-500/25 font-medium w-full sm:w-auto justify-center"
               >
                 <Plus size={18} />
                 <span>Create New Assignment</span>
@@ -531,9 +599,9 @@ export default function AdminDashboard() {
               ) : (
                 assignments.map((assignment: any) => (
                   <div key={assignment.id} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl">
-                    <div className="p-6 border-b border-white/10 flex justify-between items-start bg-black/40">
+                    <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row justify-between sm:items-start bg-black/40 gap-4">
                       <div>
-                        <div className="flex items-center space-x-3 mb-2">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
                           <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-400 text-xs font-semibold tracking-wider">
                             {assignment.subject}
                           </span>
@@ -547,15 +615,15 @@ export default function AdminDashboard() {
                         <h3 className="text-xl font-bold text-white mb-1">{assignment.title}</h3>
                         <p className="text-sm text-gray-400">{assignment.description}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="sm:text-right border-t sm:border-0 border-white/10 pt-4 sm:pt-0">
                         <p className="text-3xl font-light text-white">{assignment.submissions?.length || 0}</p>
                         <p className="text-xs text-gray-500 font-medium">SUBMISSIONS</p>
                       </div>
                     </div>
                     
-                    <div className="p-0">
+                    <div className="p-0 overflow-x-auto">
                       {assignment.submissions?.length > 0 ? (
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse min-w-[600px]">
                           <thead>
                             <tr className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
                               <th className="px-6 py-3 font-medium">Student Name</th>
@@ -619,18 +687,18 @@ export default function AdminDashboard() {
 
         {/* --- Academics & Fees Tab --- */}
         {activeTab === 'Academics' && (
-          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Academics & Fees</h1>
-                <p className="text-gray-400">Push financial invoices and exam results directly to student portals.</p>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">Academics & Fees</h1>
+                <p className="text-gray-400 text-sm sm:text-base">Push financial invoices and exam results directly to student portals.</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               
               {/* Financial Hub */}
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-xl">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-3 bg-rose-500/20 text-rose-400 rounded-xl">
                     <DollarSign size={24} />
@@ -692,7 +760,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Academic Hub */}
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-white/5 border border-white/10 rounded-2xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-xl">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
                     <Award size={24} />
@@ -701,7 +769,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <form onSubmit={handlePublishResult} className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="relative">
                       <label className="block text-xs font-semibold text-gray-400 mb-1.5">Search & Select Student</label>
                       <input 
@@ -753,20 +821,20 @@ export default function AdminDashboard() {
                     </div>
                     
                     {resultSubjects.map((sub, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2 relative group items-center">
-                        <div className="col-span-4">
+                      <div key={index} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 relative group items-start sm:items-center p-3 sm:p-0 bg-black/40 sm:bg-transparent rounded-xl border sm:border-0 border-white/5">
+                        <div className="col-span-4 w-full">
                           <input type="text" required placeholder="Subject Name" value={sub.subject} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].subject = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
                         </div>
-                        <div className="col-span-3">
+                        <div className="col-span-3 w-full">
                           <input type="number" required placeholder="Marks" value={sub.marksObtained} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].marksObtained = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-2 w-full flex space-x-2 sm:block">
                           <input type="number" required placeholder="Total" value={sub.totalMarks} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].totalMarks = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-2 w-full">
                           <input type="text" required placeholder="Grade" value={sub.grade} onChange={e => { const newSubs = [...resultSubjects]; newSubs[index].grade = e.target.value; setResultSubjects(newSubs); }} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-emerald-500" />
                         </div>
-                        <div className="col-span-1 flex justify-center">
+                        <div className="col-span-1 flex justify-end w-full sm:w-auto">
                           {resultSubjects.length > 1 && (
                             <button type="button" onClick={() => { const newSubs = resultSubjects.filter((_, i) => i !== index); setResultSubjects(newSubs); }} className="text-gray-500 hover:text-red-400 transition-colors p-1">
                               <X size={16} />
@@ -789,16 +857,16 @@ export default function AdminDashboard() {
 
         {/* --- System Settings Tab --- */}
         {activeTab === 'Settings' && (
-          <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-bold tracking-tight text-white mb-2">System Settings</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2">System Settings</h1>
                 <p className="text-gray-400">Manage global school preferences, academic years, and security.</p>
               </div>
               <button 
                 onClick={handleSaveSettings}
                 disabled={isSavingSettings}
-                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/25 font-medium disabled:opacity-50"
+                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/25 font-medium disabled:opacity-50 w-full sm:w-auto justify-center"
               >
                 {isSavingSettings ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={18} />}
                 <span>Save Configurations</span>
@@ -808,7 +876,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
               {/* General Info */}
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-xl">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl">
                     <Building size={24} />
@@ -838,7 +906,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Academic Year */}
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-xl">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
                     <CalendarDays size={24} />
@@ -874,7 +942,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Notifications */}
-              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-xl">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl">
                     <BellRing size={24} />
@@ -889,7 +957,7 @@ export default function AdminDashboard() {
                     </div>
                     <button 
                       onClick={() => setSettingsData({...settingsData, emailAlerts: !settingsData.emailAlerts})}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${settingsData.emailAlerts ? 'bg-purple-600' : 'bg-gray-700'}`}
+                      className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${settingsData.emailAlerts ? 'bg-purple-600' : 'bg-gray-700'}`}
                     >
                       <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${settingsData.emailAlerts ? 'left-7' : 'left-1'}`} />
                     </button>
@@ -901,7 +969,7 @@ export default function AdminDashboard() {
                     </div>
                     <button 
                       onClick={() => setSettingsData({...settingsData, smsAlerts: !settingsData.smsAlerts})}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${settingsData.smsAlerts ? 'bg-purple-600' : 'bg-gray-700'}`}
+                      className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${settingsData.smsAlerts ? 'bg-purple-600' : 'bg-gray-700'}`}
                     >
                       <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${settingsData.smsAlerts ? 'left-7' : 'left-1'}`} />
                     </button>
@@ -910,7 +978,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Danger Zone */}
-              <div className="bg-rose-500/5 border border-rose-500/20 rounded-3xl p-8 backdrop-blur-xl">
+              <div className="bg-rose-500/5 border border-rose-500/20 rounded-3xl p-6 sm:p-8 backdrop-blur-xl">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="p-3 bg-rose-500/20 text-rose-400 rounded-xl">
                     <ShieldAlert size={24} />
@@ -918,7 +986,7 @@ export default function AdminDashboard() {
                   <h2 className="text-2xl font-bold text-white">Danger Zone</h2>
                 </div>
                 <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-rose-500/10 rounded-xl gap-4">
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between p-5 bg-black/40 border border-rose-500/10 rounded-xl gap-4">
                     <div>
                       <p className="font-medium text-white">Clear System Cache</p>
                       <p className="text-xs text-gray-500">Forces all portals to fetch fresh data.</p>
@@ -927,7 +995,7 @@ export default function AdminDashboard() {
                       Clear Cache
                     </button>
                   </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-rose-500/10 rounded-xl gap-4">
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between p-5 bg-black/40 border border-rose-500/10 rounded-xl gap-4">
                     <div>
                       <p className="font-medium text-white text-rose-400">Reset Academic Year</p>
                       <p className="text-xs text-gray-500">Archives all current assignments and attendance.</p>
@@ -946,15 +1014,15 @@ export default function AdminDashboard() {
       </main>
 
       {/* --- Super Profile Slide-out Modal --- */}
-      <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-zinc-950 border-l border-white/10 shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isProfileOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[28rem] bg-zinc-950 border-l border-white/10 shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isProfileOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         {selectedStudent && (
           <div className="h-full flex flex-col">
             
             {/* Profile Header */}
-            <div className="p-6 border-b border-white/10 bg-black/50 relative overflow-hidden">
+            <div className="p-6 border-b border-white/10 bg-black/50 relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full -z-10" />
               <div className="flex justify-between items-start mb-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg shrink-0">
                   {selectedStudent.firstName[0]}{selectedStudent.lastName[0]}
                 </div>
                 <button onClick={() => setIsProfileOpen(false)} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
@@ -966,7 +1034,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Profile Navigation Tabs */}
-            <div className="flex border-b border-white/10 bg-black/20 px-2 overflow-x-auto no-scrollbar">
+            <div className="flex border-b border-white/10 bg-black/20 px-2 overflow-x-auto no-scrollbar shrink-0">
               {['Overview', 'Fees', 'Results', 'Attendance'].map(tab => (
                 <button
                   key={tab}
@@ -1046,14 +1114,44 @@ export default function AdminDashboard() {
                     {selectedStudent.attendances?.length > 0 ? (
                       <div className="space-y-2">
                         {selectedStudent.attendances.map((rec: any, i: number) => (
-                          <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
-                            <div>
-                              <p className="text-sm font-medium text-white">{rec.subject}</p>
-                              <p className="text-xs text-gray-500">{new Date(rec.date).toLocaleDateString()}</p>
-                            </div>
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${rec.status === 'PRESENT' ? 'bg-emerald-500/20 text-emerald-400' : rec.status === 'ABSENT' ? 'bg-rose-500/20 text-rose-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                              {rec.status}
-                            </span>
+                          <div key={i} className="flex flex-col space-y-2">
+                            {editingRecord?.id === rec.id ? (
+                              <div className="p-4 rounded-xl bg-black/40 border border-indigo-500/50 space-y-3">
+                                <input type="date" value={editRecordData.date.split('T')[0]} onChange={e => setEditRecordData({...editRecordData, date: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                                <input type="text" value={editRecordData.subject} onChange={e => setEditRecordData({...editRecordData, subject: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                                <select value={editRecordData.status} onChange={e => setEditRecordData({...editRecordData, status: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+                                  <option value="PRESENT">Present</option><option value="ABSENT">Absent</option><option value="LATE">Late</option>
+                                </select>
+                                <div className="flex space-x-2 pt-2">
+                                  <button onClick={() => handleSaveEditedRecord('attendance')} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white transition-colors">Save Changes</button>
+                                  <button onClick={() => setEditingRecord(null)} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium text-white transition-colors">Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5 group">
+                                <div>
+                                  <p className="text-sm font-medium text-white">{rec.subject}</p>
+                                  <p className="text-xs text-gray-500">{new Date(rec.date).toLocaleDateString()}</p>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-md ${rec.status === 'PRESENT' ? 'bg-emerald-500/20 text-emerald-400' : rec.status === 'ABSENT' ? 'bg-rose-500/20 text-rose-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                    {rec.status}
+                                  </span>
+                                  <div className="opacity-0 lg:group-hover:opacity-100 flex space-x-1 transition-all">
+                                    <button 
+                                      onClick={() => { setEditingRecord({id: rec.id, type: 'attendance'}); setEditRecordData({...rec}); }}
+                                      className="p-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                                      title="Edit Record"
+                                    ><Edit3 size={14} /></button>
+                                    <button 
+                                      onClick={() => handleDeleteRecord('attendance', rec.id)}
+                                      className="p-1.5 rounded-md bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                                      title="Delete Record"
+                                    ><Trash2 size={14} /></button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1069,15 +1167,36 @@ export default function AdminDashboard() {
                 <div className="space-y-4 animate-in fade-in duration-300">
                   {selectedStudent.fees?.length > 0 ? (
                     selectedStudent.fees.map((fee: any, i: number) => (
-                      <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="font-medium text-white text-sm">{fee.title}</p>
-                          <span className={`text-xs px-2 py-1 rounded font-medium ${fee.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                            {fee.status}
-                          </span>
-                        </div>
-                        <p className="text-2xl font-bold text-white mb-1">${fee.amount.toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">Due: {new Date(fee.dueDate).toLocaleDateString()}</p>
+                      <div key={i} className="relative">
+                        {editingRecord?.id === fee.id ? (
+                          <div className="p-4 rounded-xl bg-black/40 border border-indigo-500/50 space-y-3">
+                            <input type="text" value={editRecordData.title} onChange={e => setEditRecordData({...editRecordData, title: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                            <input type="number" value={editRecordData.amount} onChange={e => setEditRecordData({...editRecordData, amount: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                            <input type="date" value={editRecordData.dueDate.split('T')[0]} onChange={e => setEditRecordData({...editRecordData, dueDate: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                            <select value={editRecordData.status} onChange={e => setEditRecordData({...editRecordData, status: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+                              <option value="PENDING">PENDING</option><option value="PAID">PAID</option>
+                            </select>
+                            <div className="flex space-x-2 pt-2">
+                              <button onClick={() => handleSaveEditedRecord('fee')} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white transition-colors">Save Changes</button>
+                              <button onClick={() => setEditingRecord(null)} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium text-white transition-colors">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-4 rounded-xl bg-white/5 border border-white/10 group">
+                            <div className="absolute top-4 right-4 opacity-0 lg:group-hover:opacity-100 flex space-x-2 transition-all">
+                              <button onClick={() => { setEditingRecord({id: fee.id, type: 'fee'}); setEditRecordData({...fee}); }} className="p-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"><Edit3 size={16} /></button>
+                              <button onClick={() => handleDeleteRecord('fee', fee.id)} className="p-1.5 rounded-md bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"><Trash2 size={16} /></button>
+                            </div>
+                            <div className="flex justify-between items-start mb-2 pr-16">
+                              <p className="font-medium text-white text-sm">{fee.title}</p>
+                              <span className={`text-xs px-2 py-1 rounded font-medium ${fee.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                {fee.status}
+                              </span>
+                            </div>
+                            <p className="text-2xl font-bold text-white mb-1">${fee.amount.toLocaleString()}</p>
+                            <p className="text-xs text-gray-500">Due: {new Date(fee.dueDate).toLocaleDateString()}</p>
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -1091,17 +1210,41 @@ export default function AdminDashboard() {
                 <div className="space-y-4 animate-in fade-in duration-300">
                   {selectedStudent.results?.length > 0 ? (
                     selectedStudent.results.map((res: any, i: number) => (
-                      <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center">
-                        <div>
-                          <p className="font-medium text-white text-sm">{res.subject}</p>
-                          <p className="text-xs text-gray-500">{res.examName}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-white">{res.marksObtained}<span className="text-xs text-gray-500">/{res.totalMarks}</span></p>
-                          <p className={`text-xs font-bold ${res.grade.includes('A') ? 'text-emerald-400' : res.grade.includes('B') ? 'text-blue-400' : 'text-orange-400'}`}>
-                            Grade {res.grade}
-                          </p>
-                        </div>
+                      <div key={i} className="relative">
+                        {editingRecord?.id === res.id ? (
+                          <div className="p-4 rounded-xl bg-black/40 border border-indigo-500/50 space-y-3">
+                            <input type="text" placeholder="Subject" value={editRecordData.subject} onChange={e => setEditRecordData({...editRecordData, subject: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                            <input type="text" placeholder="Exam Name" value={editRecordData.examName} onChange={e => setEditRecordData({...editRecordData, examName: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                            <div className="grid grid-cols-2 gap-2">
+                              <input type="number" placeholder="Marks Obtained" value={editRecordData.marksObtained} onChange={e => setEditRecordData({...editRecordData, marksObtained: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                              <input type="number" placeholder="Total Marks" value={editRecordData.totalMarks} onChange={e => setEditRecordData({...editRecordData, totalMarks: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                            </div>
+                            <input type="text" placeholder="Grade" value={editRecordData.grade} onChange={e => setEditRecordData({...editRecordData, grade: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
+                            <div className="flex space-x-2 pt-2">
+                              <button onClick={() => handleSaveEditedRecord('result')} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white transition-colors">Save Changes</button>
+                              <button onClick={() => setEditingRecord(null)} className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium text-white transition-colors">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center group">
+                            <div>
+                              <p className="font-medium text-white text-sm">{res.subject}</p>
+                              <p className="text-xs text-gray-500">{res.examName}</p>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                               <div className="text-right mr-2">
+                                 <p className="text-lg font-bold text-white">{res.marksObtained}<span className="text-xs text-gray-500">/{res.totalMarks}</span></p>
+                                 <p className={`text-xs font-bold ${res.grade.includes('A') ? 'text-emerald-400' : res.grade.includes('B') ? 'text-blue-400' : 'text-orange-400'}`}>
+                                   Grade {res.grade}
+                                 </p>
+                               </div>
+                               <div className="opacity-0 lg:group-hover:opacity-100 flex flex-col space-y-1 transition-all shrink-0">
+                                 <button onClick={() => { setEditingRecord({id: res.id, type: 'result'}); setEditRecordData({...res}); }} className="p-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"><Edit3 size={14} /></button>
+                                 <button onClick={() => handleDeleteRecord('result', res.id)} className="p-1.5 rounded-md bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"><Trash2 size={14} /></button>
+                               </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -1120,7 +1263,7 @@ export default function AdminDashboard() {
       {/* 1. Add Single Student Modal */}
       {isAddStudentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="text-2xl font-bold text-white">Add Student</h3>
               <button onClick={() => setIsAddStudentModalOpen(false)} className="text-gray-400 hover:text-white"><X size={18} /></button>
@@ -1159,7 +1302,7 @@ export default function AdminDashboard() {
       {/* 2. Build Schedule Modal */}
       {isScheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="text-2xl font-bold text-white">Add Class Period</h3>
               <button onClick={() => setIsScheduleModalOpen(false)} className="text-gray-400 hover:text-white"><X size={18} /></button>
@@ -1281,7 +1424,7 @@ export default function AdminDashboard() {
       {/* 5. Create Assignment Modal Overlay */}
       {isAssignmentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200 shadow-2xl">
+          <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-2xl font-bold text-white">New Assignment</h3>
