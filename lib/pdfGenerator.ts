@@ -9,11 +9,12 @@ export const generateTranscriptPDF = (student: any, results?: any[]) => {
   // Header & Branding
   doc.setFontSize(22);
   doc.setTextColor(37, 99, 235); // Blue-600
-  doc.text("NEXUS ACADEMY", pageWidth / 2, 20, { align: "center" });
-
+  doc.text("SUNSHINE INTER COLLEGE", pageWidth / 2, 20, { align: "center" });
+  doc.setFontSize(14);
+  doc.text("Firozabad Road,Tundla-283204", pageWidth / 2, 27, { align: "center" });
   doc.setFontSize(14);
   doc.setTextColor(100, 100, 100);
-  doc.text("Official Academic Transcript", pageWidth / 2, 28, { align: "center" });
+  doc.text("Official Academic Result", pageWidth / 2, 35, { align: "center" });
 
   // Student Details
   doc.setFontSize(11);
@@ -46,10 +47,12 @@ export const generateTranscriptPDF = (student: any, results?: any[]) => {
   const finalY = (doc as any).lastAutoTable.finalY || 70;
   doc.setFontSize(10);
   doc.setTextColor(150, 150, 150);
-  doc.text("_________________________", pageWidth - 50, finalY + 30, { align: "center" });
-  doc.text("Registrar Signature", pageWidth - 50, finalY + 35, { align: "center" });
+  doc.text("Sanjeev Tomar", pageWidth - 50, finalY + 30, { align: "center" });
+  doc.text("Principal's Signature", pageWidth - 50, finalY + 35, { align: "center" });
   
   doc.text("This is a digitally generated official transcript.", pageWidth / 2, finalY + 50, { align: "center" });
+
+  doc.text("Kindly Contact Administrative Office For Physical Copy", pageWidth / 2, finalY + 60, { align: "center" });
 
   // Save the file
   doc.save(`${student.firstName}_Transcript.pdf`);

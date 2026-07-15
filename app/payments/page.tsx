@@ -1,306 +1,194 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { 
-  CreditCard, ShieldCheck, ArrowLeft, Lock, CheckCircle2, AlertTriangle, Download
-} from 'lucide-react';
-import { generateReceiptPDF } from '@/lib/pdfGenerator';
-import { Instrument_Serif, Inter } from 'next/font/google';
+import { motion } from 'framer-motion';
+import { ShieldCheck, ArrowLeft, Lock } from 'lucide-react';
 
-const instrumentSerif = Instrument_Serif({ weight: '400', subsets: ['latin'], style: ['normal'] });
-const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
+const GLOBAL_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+html, body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; background-color: #0c0c0c; color: white; }
+.liquid-glass { background: rgba(255,255,255,0.01); background-blend-mode: luminosity; backdrop-filter: blur(4px); border: none; box-shadow: inset 0 1px 1px rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+.liquid-glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.4px; background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+`;
 
-// Helper to load the Razorpay checkout script dynamically
-const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+const FUN_FACTS = [
+  "Bananas are curved because they grow towards the sun.",
+  "A day on Venus is longer than a year on Venus.",
+  "Octopuses have three hearts and blue blood.",
+  "The shortest war in history lasted just 38 minutes."
+];
 
-export default function CheckoutPage() {
+export default function PaymentsPage() {
   const [studentData, setStudentData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Payment States
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<'IDLE' | 'SUCCESS' | 'FAILED'>('IDLE');
-  const [transactionDetails, setTransactionDetails] = useState<any>(null);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [fact, setFact] = useState("");
 
   useEffect(() => {
-    const fetchFinancials = async () => {
-      try {
-        // CACHE BUSTING added here so right after they pay, it instantly updates
-        const response = await fetch('/api/student/dashboard', {
-          headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
-        });
-        if (response.status === 401) {
-          window.location.href = '/login';
-          return;
-        }
-        const json = await response.json();
+    setFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
+    
+    // Load Razorpay Script
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    document.body.appendChild(script);
+
+    // Fetch Student Financial Data
+    fetch('/api/student/dashboard', { headers: { 'Cache-Control': 'no-cache, no-store' } })
+      .then(res => res.json())
+      .then(json => {
         if (json.success) setStudentData(json.data);
-      } catch (error) {
-        console.error("Failed to load financials", error);
-      } finally {
         setIsLoading(false);
-      }
-    };
-    fetchFinancials();
+      });
   }, []);
 
-  // Grabs the oldest pending fee. We let them pay one at a time for invoice clarity.
-  const pendingFee = studentData?.fees?.find((f: any) => f.status === 'PENDING');
+  const pendingFees = studentData?.fees?.filter((f: any) => f.status === 'PENDING') || [];
+  const totalAmount = pendingFees.reduce((sum: number, fee: any) => sum + fee.amount, 0);
+  const combinedTitle = pendingFees.length > 1 ? `${pendingFees.length} Pending Dues (Combined)` : (pendingFees[0]?.title || '');
+  const combinedIds = pendingFees.map((f: any) => f.id).join(','); // Join all IDs with a comma
+
+  const pendingFee = pendingFees.length > 0 ? {
+    id: combinedIds,
+    title: combinedTitle,
+    amount: totalAmount
+  } : null;
 
   const handlePayment = async () => {
     if (!pendingFee) return;
     setIsProcessing(true);
-    setErrorMessage('');
-    setPaymentStatus('IDLE');
-
-    // 1. Load Razorpay Script
-    const isScriptLoaded = await loadRazorpayScript();
-    if (!isScriptLoaded) {
-      setErrorMessage("Razorpay SDK failed to load. Are you online?");
-      setIsProcessing(false);
-      setPaymentStatus('FAILED');
-      return;
-    }
 
     try {
-      // 2. Create Order on our Secure Backend
-      const orderRes = await fetch('/api/payments/razorpay/create', {
+      // 1. Create Razorpay Order
+      const res = await fetch('/api/payments/razorpay/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invoiceId: pendingFee.id, amount: pendingFee.amount })
       });
-      const orderData = await orderRes.json();
+      const orderData = await res.json();
 
       if (!orderData.success) {
-        setErrorMessage(orderData.error || "Failed to create secure order.");
+        alert("Error initiating payment. Please try again.");
         setIsProcessing(false);
-        setPaymentStatus('FAILED');
         return;
       }
 
-      // 3. Initialize Razorpay Checkout Window
+      // 2. Open Razorpay Checkout Window
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder",
-        amount: orderData.amount, // in paise
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
         currency: "INR",
-        name: "Sunshine Inter College",
+        name: "Sunshine Portal",
         description: pendingFee.title,
         order_id: orderData.orderId,
         handler: async function (response: any) {
-          // 4. Verify Signature on Backend after success
+          // 3. Verify Payment Signature
           const verifyRes = await fetch('/api/payments/razorpay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
+              ...response,
               invoiceId: pendingFee.id,
               amount: pendingFee.amount
             })
           });
           const verifyData = await verifyRes.json();
-
+          
           if (verifyData.success) {
-            setTransactionDetails({
-              id: verifyData.transactionId,
-              amount: pendingFee.amount,
-              title: pendingFee.title,
-              date: new Date().toLocaleString()
-            });
-            setPaymentStatus('SUCCESS');
+            window.location.href = '/fees'; // Redirect back to financials page
           } else {
-            setErrorMessage("Payment verification failed. If money was deducted, it will be refunded.");
-            setPaymentStatus('FAILED');
+            alert("Payment Verification Failed. Contact administration.");
+            setIsProcessing(false);
           }
-          setIsProcessing(false);
         },
         prefill: {
           name: `${studentData.firstName} ${studentData.lastName}`,
           email: studentData.user?.email || "",
         },
-        theme: {
-          color: "#4f46e5"
-        }
+        theme: { color: "#00d2ff" }
       };
 
-      const rzp1 = new (window as any).Razorpay(options);
-      
-      rzp1.on('payment.failed', function (response: any){
-        setErrorMessage(response.error.description || "Payment failed or was cancelled.");
-        setPaymentStatus('FAILED');
-        setIsProcessing(false);
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function () {
+         alert("Payment Canceled or Failed.");
+         setIsProcessing(false);
       });
-
-      rzp1.open();
+      rzp.open();
 
     } catch (error) {
-      setErrorMessage("A network error occurred. Please try again.");
-      setPaymentStatus('FAILED');
+      console.error(error);
       setIsProcessing(false);
+      alert("Network error occurred.");
     }
   };
 
-  const handleDownloadReceipt = () => {
-    if (studentData && transactionDetails) {
-      generateReceiptPDF(studentData, transactionDetails);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a061a] flex flex-col items-center justify-center text-white">
-        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4" />
-        <p className="text-indigo-400 font-medium">Connecting to Payment Gateway...</p>
+  if (isLoading || !studentData) return (
+    <div className="min-h-screen text-white bg-[#0c0c0c] flex items-center justify-center relative overflow-hidden">
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
+      <div className="absolute inset-0 z-0"><video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-20 blur-sm" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260508_064122_c4750c0e-7476-4b44-94a2-a85a65c63bf2.mp4" /></div>
+      <div className="relative z-10 flex flex-col items-center text-center px-4">
+        <img src="/logo.png" alt="Sunshine Logo" className="w-12 h-12 object-contain mb-6 animate-pulse" />
+        <div className="w-8 h-8 border-2 border-[#00d2ff]/30 border-t-[#00d2ff] rounded-full animate-spin mb-8" />
+        <span className="text-[10px] font-bold tracking-widest text-[#00d2ff] uppercase mb-3">Did you know?</span>
+        <p className="text-white/80 text-sm font-medium">"{fact}"</p>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // --- SUCCESS SCREEN ---
-  if (paymentStatus === 'SUCCESS') {
-    return (
-      <div className={`min-h-screen ${inter.className} bg-[#F9F8FC] flex flex-col items-center justify-center text-[#1E1B4B] p-8 overflow-hidden relative`}>
-        <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-100 via-[#F9F8FC] to-[#F9F8FC]" />
-        
-        <div className="bg-white/80 border border-white rounded-[2rem] p-10 backdrop-blur-3xl max-w-md w-full text-center z-10 animate-in zoom-in-95 shadow-[0_20px_60px_rgba(16,185,129,0.15)]">
-          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-emerald-200">
-            <CheckCircle2 size={48} className="text-emerald-500" />
-          </div>
-          <h2 className={`${instrumentSerif.className} text-4xl mb-2`}>Payment Successful</h2>
-          <p className="text-gray-500 mb-8 font-medium">Your account has been instantly updated.</p>
-          
-          <div className="bg-gray-50 rounded-2xl p-5 mb-8 text-left border border-gray-100">
-            <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Transaction ID</p>
-            <p className="font-mono text-emerald-600 font-bold">{transactionDetails.id}</p>
-            <div className="h-px w-full bg-gray-200 my-4" />
-            <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Amount Paid</p>
-            <p className="font-bold text-2xl text-[#1E1B4B]">₹{transactionDetails.amount.toLocaleString()}</p>
-          </div>
-
-          <div className="space-y-3">
-            <button 
-              onClick={handleDownloadReceipt}
-              className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg flex items-center justify-center space-x-2"
-            >
-              <Download size={18} />
-              <span>Download PDF Receipt</span>
-            </button>
-            <button 
-              onClick={() => window.location.href = '/fees'}
-              className="w-full py-3.5 rounded-xl bg-white border border-gray-200 text-[#1E1B4B] hover:bg-gray-50 transition-colors font-medium"
-            >
-              Return to Financials
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- FAILURE SCREEN ---
-  if (paymentStatus === 'FAILED') {
-    return (
-      <div className={`min-h-screen ${inter.className} bg-[#F9F8FC] flex flex-col items-center justify-center text-[#1E1B4B] p-8 relative`}>
-        <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-orange-100 via-[#F9F8FC] to-[#F9F8FC]" />
-        
-        <div className="bg-white/80 border border-white rounded-[2rem] p-10 backdrop-blur-3xl max-w-md w-full text-center z-10 animate-in zoom-in-95 shadow-[0_20px_60px_rgba(249,115,22,0.15)]">
-          <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-orange-200">
-            <AlertTriangle size={48} className="text-orange-500" />
-          </div>
-          <h2 className={`${instrumentSerif.className} text-4xl mb-2 text-[#1E1B4B]`}>Payment Failed</h2>
-          <p className="text-gray-500 mb-6 font-medium">{errorMessage}</p>
-          
-          <button 
-            onClick={handlePayment}
-            className="w-full py-4 rounded-xl bg-[#1E1B4B] text-white font-bold hover:bg-[#312E81] transition-colors shadow-lg flex items-center justify-center space-x-2 mb-3"
-          >
-            Retry Payment
-          </button>
-          <button 
-            onClick={() => window.location.href = '/fees'}
-            className="w-full py-3 rounded-xl text-gray-500 hover:text-gray-800 transition-colors font-medium text-sm border border-transparent hover:border-gray-200"
-          >
-            Cancel and Return
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // --- CHECKOUT SCREEN ---
   return (
-    <div className={`min-h-screen ${inter.className} bg-[#F9F8FC] text-[#1E1B4B] overflow-hidden`}>
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-100 via-[#F9F8FC] to-[#F9F8FC] pointer-events-none" />
-
-      <div className="relative z-10 max-w-3xl mx-auto p-4 sm:p-8 mt-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <button 
-          onClick={() => window.history.back()}
-          className="flex items-center text-sm font-bold text-gray-500 hover:text-[#1E1B4B] transition-colors mb-8 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-100"
-        >
-          <ArrowLeft size={16} className="mr-2" /> Return to Dashboard
-        </button>
-
-        <div className="flex items-center space-x-2 text-indigo-600 mb-4">
-          <ShieldCheck size={20} />
-          <span className="text-xs font-bold tracking-widest uppercase">Razorpay Secure Checkout</span>
-        </div>
-        <h1 className={`${instrumentSerif.className} text-5xl mb-8`}>Complete Payment</h1>
-        
-        {pendingFee ? (
-          <div className="bg-white/80 border border-white rounded-[2rem] p-8 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.05)] relative overflow-hidden">
-            
-            <div className="flex justify-between items-start mb-8 relative z-10">
-              <div>
-                <p className="text-xl font-bold text-[#1E1B4B] mb-1">{pendingFee.title}</p>
-                <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">{studentData.firstName} {studentData.lastName} • {studentData.enrollmentNo}</p>
-              </div>
-            </div>
-
-            <div className="h-px w-full bg-gray-200 mb-6" />
-
-            <div className="flex justify-between items-center text-lg mb-10">
-              <p className="text-gray-500 font-bold uppercase tracking-wider">Total Amount Due</p>
-              <p className={`${instrumentSerif.className} text-5xl text-[#1E1B4B]`}>
-                ₹{pendingFee.amount.toLocaleString()}
-              </p>
-            </div>
-
-            <button 
-              onClick={handlePayment}
-              disabled={isProcessing}
-              className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all disabled:opacity-50 flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30"
-            >
-              {isProcessing ? (
-                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  <Lock size={18} />
-                  <span>Pay Now via Razorpay</span>
-                </>
-              )}
-            </button>
-            
-            <div className="flex items-center justify-center space-x-3 text-xs font-bold text-gray-400 mt-6 uppercase tracking-wider">
-              <ShieldCheck size={14} />
-              <span>Payments are secured with 256-bit encryption and RBI compliant.</span>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-emerald-50 border border-emerald-100 rounded-[2rem] p-10 text-center text-emerald-800 shadow-sm">
-            <CheckCircle2 size={48} className="mx-auto mb-4 opacity-80 text-emerald-500" />
-            <p className={`${instrumentSerif.className} text-4xl mb-2`}>All Cleared!</p>
-            <p className="font-semibold text-sm text-emerald-600/80">You have no pending invoices to pay.</p>
-          </div>
-        )}
+    <div className="min-h-screen text-white bg-[#0c0c0c] flex overflow-hidden">
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-[0.25]" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260508_064122_c4750c0e-7476-4b44-94a2-a85a65c63bf2.mp4" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0c0c0c] via-transparent to-transparent" />
       </div>
+
+      <main className="flex-1 relative z-10 p-6 md:p-10 flex flex-col items-center justify-center min-h-screen">
+        <div className="w-full max-w-xl">
+           <button onClick={() => window.location.href = '/fees'} className="mb-8 flex items-center gap-2 text-sm font-medium text-white/50 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-full border border-white/10 w-fit">
+             <ArrowLeft size={16} /> Return to Dashboard
+           </button>
+
+           <div className="mb-6 flex items-center gap-2 text-[#00d2ff] font-bold text-sm tracking-widest uppercase">
+             <ShieldCheck size={18} /> Razorpay Secure Checkout
+           </div>
+
+           <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-white mb-8">Complete Payment.</h1>
+
+           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="liquid-glass rounded-3xl p-8 md:p-10 relative overflow-hidden shadow-2xl">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-[#00d2ff]/10 blur-3xl rounded-full -z-10" />
+              
+              {pendingFee ? (
+                <>
+                  <div className="mb-8">
+                    <h2 className="text-xl font-bold text-white mb-1">{pendingFee.title}</h2>
+                    <p className="text-xs font-bold text-white/40 tracking-widest uppercase">{studentData.firstName} {studentData.lastName} • {studentData.enrollmentNo}</p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 border-t border-white/10 pt-8 mb-8">
+                    <span className="text-sm font-bold text-white/50 tracking-widest uppercase">Total Amount Due</span>
+                    <span className="text-5xl font-bold tracking-tight text-white">₹{pendingFee.amount.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  <button onClick={handlePayment} disabled={isProcessing} className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 rounded-full font-bold text-base hover:bg-white/90 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-70 disabled:scale-100">
+                    {isProcessing ? (
+                      <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    ) : (
+                      <><Lock size={18} /> Pay Now via Razorpay</>
+                    )}
+                  </button>
+
+                  <div className="mt-6 flex items-center justify-center gap-2 text-xs font-bold text-white/30 uppercase tracking-wider text-center">
+                    <ShieldCheck size={14} className="text-[#28c840]" /> Payments are secured with 256-bit encryption and RBI compliant.
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-10">
+                   <div className="w-16 h-16 rounded-full bg-[#28c840]/10 flex items-center justify-center mx-auto mb-4 border border-[#28c840]/20"><ShieldCheck size={32} className="text-[#28c840]" /></div>
+                   <h3 className="text-xl font-bold text-white mb-1">Account Cleared</h3>
+                   <p className="text-white/50 text-sm font-medium">You have no pending invoices at this time.</p>
+                </div>
+              )}
+           </motion.div>
+        </div>
+      </main>
     </div>
   );
 }
