@@ -1,29 +1,21 @@
 "use client";
 import React, { useState } from 'react';
 import { Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Instrument_Serif, Inter } from 'next/font/google';
 
-// --- MOCK ENVIRONMENT SETUP ---
-// We mock these Next.js specific functions so the UI compiles in this environment.
-// In your actual Next.js project, you should use the real imports:
-// import { signIn } from 'next-auth/react';
-// import { useRouter } from 'next/navigation';
-// import { Instrument_Serif, Inter } from 'next/font/google';
-
-const signIn = async (provider: string, options: any) => {
-  console.log(`Mock sign in via ${provider}`);
-  setTimeout(() => { alert(`Success! Redirecting to ${options?.callbackUrl || '/'}`); }, 1000);
-  return { error: null };
-};
-
-const useRouter = () => ({
-  push: (url: string) => alert(`Mock router push to: ${url}`),
-  refresh: () => console.log('Mock router refresh')
+// Load Google Fonts 
+const instrumentSerif = Instrument_Serif({ 
+  weight: '400', 
+  subsets: ['latin'], 
+  style: ['normal', 'italic'] 
 });
 
-// Since next/font is unavailable, we use standard tailwind classes
-// and assume the fonts are loaded via standard CSS imports for the preview.
-const instrumentSerifClass = "font-serif"; 
-const interClass = "font-sans";
+const inter = Inter({ 
+  subsets: ['latin'], 
+  weight: ['400', '500', '600'] 
+});
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,7 +24,7 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
 
-  // Custom Credentials Login
+  // REAL Custom Credentials Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -48,12 +40,15 @@ export default function LoginPage() {
         alert("Invalid email or password!");
         setIsLoading(false);
       } else {
-        // Mock role routing
-        if (email.includes('admin')) {
+        const sessionRes = await fetch('/api/auth/session');
+        const sessionData = await sessionRes.json();
+
+        if (sessionData?.user && sessionData.user.role === 'ADMIN') {
           router.push('/admin');
         } else {
           router.push('/');
         }
+        
         router.refresh();
       }
     } catch (err) {
@@ -63,22 +58,15 @@ export default function LoginPage() {
     }
   };
 
-  // Google Login
+  // REAL Google Login
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     await signIn('google', { callbackUrl: '/' }); 
   };
 
   return (
-    <div className={`relative h-screen w-full overflow-y-auto overflow-x-hidden flex flex-col ${interClass} text-[#1B133C] bg-black`}>
+    <div className={`relative h-screen w-full overflow-y-auto overflow-x-hidden flex flex-col ${inter.className} text-[#1B133C] bg-black`}>
       
-      {/* Fallback CSS to load fonts in this preview environment */}
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
-        .font-serif { font-family: 'Instrument Serif', serif; }
-        .font-sans { font-family: 'Inter', sans-serif; }
-      `}} />
-
       {/* 3D Animated Background Video */}
       <video
         autoPlay
@@ -121,7 +109,7 @@ export default function LoginPage() {
         </div>
 
         {/* Heading */}
-        <h1 className={`${instrumentSerifClass} text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-tight text-[#1B133C] max-w-4xl mx-auto drop-shadow-sm`}>
+        <h1 className={`${instrumentSerif.className} text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-tight text-[#1B133C] max-w-4xl mx-auto drop-shadow-sm`}>
           Welcome to <br />
           <span className="italic">Sunshine Inter College</span>
         </h1>
