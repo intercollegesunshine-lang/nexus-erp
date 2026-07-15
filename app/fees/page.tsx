@@ -1,205 +1,119 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, CreditCard, Download, CheckCircle2, 
-  AlertCircle, Receipt, Calendar, DollarSign 
-} from 'lucide-react';
-// IMPORT THE PDF ENGINE!
-import { generateReceiptPDF } from '@/lib/pdfGenerator';
+import { LayoutDashboard, BookOpen, CreditCard, Award, Calendar, Settings, Menu, X, Zap } from 'lucide-react';
+import { Instrument_Serif, Inter } from 'next/font/google';
+import { Canvas } from '@react-three/fiber';
+import { Float, Environment, Sphere, MeshDistortMaterial } from '@react-three/drei';
+
+const instrumentSerif = Instrument_Serif({ weight: '400', subsets: ['latin'], style: ['normal', 'italic'] });
+const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
+
+const FloatingCrystals = () => (
+  <div className="fixed inset-0 z-0 bg-[#F9F8FC]">
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-100/50 via-[#F9F8FC] to-amber-50/50" />
+    <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
+      <ambientLight intensity={1.5} color="#ffffff" />
+      <directionalLight position={[10, 10, 10]} intensity={2} color="#ffffff" />
+      <directionalLight position={[-10, -10, -10]} intensity={1} color="#8b5cf6" />
+      <directionalLight position={[0, -10, 0]} intensity={1.5} color="#f59e0b" />
+      <Float speed={2} rotationIntensity={1} floatIntensity={2}>
+        <mesh position={[5, 3, -5]} scale={2.5}><sphereGeometry args={[1, 64, 64]} /><meshPhysicalMaterial transmission={0.9} opacity={1} roughness={0.1} ior={1.5} thickness={2} color="#ffffff" /></mesh>
+      </Float>
+      <Float speed={1.5} rotationIntensity={1.5} floatIntensity={1.5}>
+        <mesh position={[-6, -3, -8]} scale={3.5}><sphereGeometry args={[1, 64, 64]} /><MeshDistortMaterial color="#FDF8E1" distort={0.3} speed={2} roughness={0.1} metalness={0.1} /></mesh>
+      </Float>
+      <Environment preset="city" />
+    </Canvas>
+  </div>
+);
 
 export default function FeesPage() {
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [studentData, setStudentData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFinancials = async () => {
-      try {
-        const response = await fetch('/api/student/dashboard');
-        if (response.status === 401) {
-          window.location.href = '/login';
-          return;
-        }
-        const json = await response.json();
-        if (json.success) {
-          setStudentData(json.data);
-        }
-      } catch (error) {
-        console.error("Failed to load financials", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchFinancials();
+    fetch('/api/student/dashboard').then(res => res.json()).then(json => { 
+      if(json.success) setStudentData(json.data); 
+      setIsLoading(false);
+    });
   }, []);
 
-  // NEW: Robust handler for generating the receipt
-  const handleDownloadReceipt = (transaction: any) => {
-    if (!studentData) return;
-    try {
-      generateReceiptPDF(studentData, transaction);
-    } catch (error) {
-      console.error("PDF Error:", error);
-      alert("Failed to generate PDF. Make sure you ran: npm install jspdf jspdf-autotable");
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white w-full h-full">
-        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  const pendingFees = studentData?.fees || [];
-  
-  // Mock transaction history for display
-  const pastTransactions = [
-    { id: 'TXN-2026-001', title: 'Q1 Tuition Fee', amount: 1500, date: '2026-01-15', method: 'Credit Card' },
-    { id: 'TXN-2025-084', title: 'Library Fine', amount: 25, date: '2025-11-20', method: 'Debit Card' }
-  ];
+  if (isLoading || !studentData) return (
+    <div className="min-h-screen bg-[#F9F8FC] flex flex-col items-center justify-center text-[#1E1B4B] w-full h-full absolute inset-0">
+      <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6" />
+      <p className={`${instrumentSerif.className} text-4xl animate-pulse italic`}>Loading Financials...</p>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans overflow-y-auto">
-      {/* Background */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-blue-600/10 blur-[150px] rounded-full" />
-      </div>
+    <div className={`min-h-screen ${inter.className} text-[#1E1B4B] bg-[#F9F8FC] relative overflow-hidden flex flex-col`}>
+      <FloatingCrystals />
+      
+      {/* Sidebar Overlay */}
+      <div className={`fixed inset-0 bg-[#1E1B4B]/20 backdrop-blur-sm z-40 transition-all duration-500 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)} />
 
-      <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-8">
-        
-        {/* Header */}
+      {/* Sidebar */}
+      <aside className={`fixed z-50 transition-transform duration-500 ease-out top-4 bottom-4 left-4 w-72 rounded-[2.5rem] border border-white bg-white/70 backdrop-blur-3xl shadow-2xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-[120%]'} flex flex-col justify-between`}>
         <div>
-          <button 
-            onClick={() => window.location.href = '/'}
-            className="flex items-center text-sm text-gray-400 hover:text-white transition-colors mb-4"
-          >
-            <ArrowLeft size={16} className="mr-2" /> Back to Dashboard
-          </button>
-          <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Fees & Payments</h1>
-          <p className="text-gray-400">Manage your pending invoices and view payment history.</p>
+          <div className="p-8 flex items-center justify-between">
+            <div className="flex items-center space-x-3"><div className="w-10 h-10 bg-[#1E1B4B] rounded-xl flex items-center justify-center"><Zap size={20} className="text-white" /></div><span className={`${instrumentSerif.className} text-2xl`}>Sunshine</span></div>
+            <button onClick={() => setSidebarOpen(false)} className="p-2.5 rounded-full bg-white/50 hover:bg-white text-gray-500 hover:text-rose-500 transition-all shadow-sm"><X size={20} /></button>
+          </div>
+          <nav className="px-6 py-2 space-y-2">
+            {[
+              { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+              { icon: Award, label: 'Transcripts', href: '/academics' },
+              { icon: CreditCard, label: 'Financials', active: true, href: '/fees' },
+              { icon: BookOpen, label: 'Assignments', href: '/assignments' },
+              { icon: Calendar, label: 'Schedule', href: '/attendance' },
+              { icon: Settings, label: 'Settings', href: '/settings' },
+            ].map((item, i) => (
+                <button key={i} onClick={() => window.location.href = item.href} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-2xl font-medium transition-all ${item.active ? 'bg-[#1E1B4B] text-white shadow-md' : 'hover:bg-white text-gray-600'}`}>
+                    <item.icon size={20} /> <span>{item.label}</span>
+                </button>
+            ))}
+          </nav>
         </div>
+      </aside>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Main Column: Invoices */}
-          <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-xl font-semibold flex items-center">
-              <AlertCircle className="mr-2 text-rose-400" /> Pending Invoices
-            </h2>
+      {/* Main Content */}
+      <main className="flex-1 h-screen overflow-y-auto relative z-10 p-6 sm:p-10 max-w-7xl mx-auto w-full">
+        <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8">
+          <div className="flex items-center space-x-4">
+            <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-2xl bg-white border border-gray-100 hover:bg-purple-50 transition-colors shadow-sm"><Menu size={20} /></button>
+            <span className="hidden sm:inline font-semibold text-gray-500 uppercase tracking-wider text-sm">Financials</span>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-[#1E1B4B] text-white flex items-center justify-center font-bold shadow-md">{studentData.firstName[0]}</div>
+        </header>
+
+        <div className="bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] p-8 sm:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <h2 className={`${instrumentSerif.className} text-4xl sm:text-5xl text-[#1E1B4B] mb-8`}>Pending Dues</h2>
             
-            {pendingFees.length > 0 ? (
-              <div className="space-y-4">
-                {pendingFees.map((fee: any, i: number) => (
-                  <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-6 rounded-2xl bg-white/5 border border-rose-500/30 backdrop-blur-xl hover:bg-white/10 transition-colors">
-                    <div className="flex items-start space-x-4 mb-4 md:mb-0">
-                      <div className="p-3 rounded-xl bg-rose-500/20 text-rose-400 mt-1">
-                        <Receipt size={24} />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-lg">{fee.title}</h4>
-                        <p className="text-sm text-gray-400 flex items-center mt-1">
-                          <Calendar size={14} className="mr-1" /> Due by {new Date(fee.dueDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-6 md:pl-4 md:border-l border-white/10">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-400 mb-1">Amount Due</p>
-                        <p className="text-2xl font-bold text-white">${fee.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                      </div>
-                      <button 
-                        onClick={() => window.location.href = '/payments'}
-                        className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg"
-                      >
-                        Pay Now
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-8 rounded-2xl bg-white/5 border border-emerald-500/30 text-center">
-                <CheckCircle2 size={40} className="text-emerald-500 mx-auto mb-4" />
-                <h3 className="text-xl font-medium mb-2">You are all caught up!</h3>
-                <p className="text-gray-400">There are no pending invoices on your account.</p>
-              </div>
-            )}
-
-            <div className="pt-8">
-              <h2 className="text-xl font-semibold flex items-center mb-6">
-                <CheckCircle2 className="mr-2 text-emerald-400" /> Payment History
-              </h2>
-              <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl">
-                <div className="space-y-0 divide-y divide-white/10">
-                  {pastTransactions.map((txn, i) => (
-                    <div key={i} className="flex items-center justify-between p-5 hover:bg-white/5 transition-colors">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
-                          <DollarSign size={20} />
-                        </div>
+            {studentData.fees?.filter((f:any) => f.status === 'PENDING').length > 0 ? (
+                <div className="space-y-4">
+                  {studentData.fees?.filter((f:any) => f.status === 'PENDING').map((f:any, i:number) => (
+                    <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center p-6 bg-white border border-white/50 rounded-2xl shadow-sm hover:shadow-md transition-all gap-4">
                         <div>
-                          <p className="font-medium">{txn.title}</p>
-                          <p className="text-xs text-gray-500">{txn.id} • {new Date(txn.date).toLocaleDateString()}</p>
+                          <p className="font-bold text-lg text-[#1E1B4B]">{f.title}</p>
+                          <p className="text-sm text-gray-500">Due: {new Date(f.dueDate).toLocaleDateString()}</p>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-6 md:pl-4">
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-white">${txn.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                          <p className="text-xs text-emerald-400 font-medium tracking-wide">SUCCESS</p>
+                        <div className="flex items-center space-x-6">
+                          <p className={`${instrumentSerif.className} text-4xl text-orange-600 font-bold`}>${f.amount.toLocaleString()}</p>
+                          <button onClick={() => window.location.href = '/payments'} className="bg-[#1E1B4B] text-white px-6 py-2.5 rounded-xl font-bold shadow-lg hover:bg-[#312E81] transition-colors whitespace-nowrap">Pay Now</button>
                         </div>
-                        
-                        {/* THE DOWNLOAD BUTTON */}
-                        <button 
-                          onClick={() => handleDownloadReceipt(txn)}
-                          className="p-3 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors group relative" 
-                          title="Download Receipt"
-                        >
-                          <Download size={18} />
-                        </button>
-                        
-                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Side Column: Summary */}
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-indigo-900/40 to-blue-900/20 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="text-sm font-medium text-gray-300 mb-2 uppercase tracking-wider">Total Outstanding</h3>
-              <p className="text-5xl font-bold tracking-tight text-white mb-2">
-                ${pendingFees.reduce((acc: number, curr: any) => acc + curr.amount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-sm text-indigo-300">Across {pendingFees.length} pending invoice(s)</p>
-            </div>
-            
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="font-semibold mb-4 flex items-center">
-                <CreditCard className="mr-2 text-blue-400" size={18}/> Payment Methods
-              </h3>
-              <div className="p-4 rounded-xl border border-white/10 bg-black/40 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-6 bg-white/10 rounded" />
-                  <div>
-                    <p className="text-sm font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-xs text-gray-500">Expires 12/28</p>
-                  </div>
+            ) : (
+                <div className="p-10 text-center bg-emerald-50 rounded-2xl border border-emerald-100">
+                  <CreditCard size={48} className="mx-auto mb-4 text-emerald-400" />
+                  <p className="text-xl font-bold text-emerald-700">All Clear!</p>
+                  <p className="text-emerald-600">You have no pending invoices.</p>
                 </div>
-                <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 font-medium">Default</span>
-              </div>
-              <button className="w-full mt-4 py-2.5 text-sm font-medium text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-xl transition-colors border border-dashed border-blue-500/30">
-                + Add New Method
-              </button>
-            </div>
-          </div>
-
+            )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

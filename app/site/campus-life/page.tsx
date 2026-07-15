@@ -8,7 +8,6 @@ const interClass = "font-sans";
 export default function CampusLifeWebsitePage() {
   return (
     <div className={`relative min-h-screen w-full overflow-y-auto overflow-x-hidden flex flex-col ${interClass} text-[#1B133C] bg-black`}>
-      {}
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
         .font-serif { font-family: 'Instrument Serif', serif; }
@@ -37,26 +36,24 @@ export default function CampusLifeWebsitePage() {
         </div>
       </nav>
 
-      {}
       <main className="relative z-10 flex-1 flex flex-col px-4 mt-12 w-full max-w-5xl mx-auto pb-16">
         <h1 className={`${instrumentSerifClass} text-5xl md:text-7xl leading-none tracking-tight text-[#1B133C] mb-4 drop-shadow-sm`}>
           Beyond the <span className="italic">Classroom.</span>
         </h1>
-        <p className="max-w-2xl text-sm md:text-base leading-relaxed text-[#1B133C]/80 font-medium mb-12">
-          Education at Sunshine Inter College extends far beyond textbooks. Experience a vibrant community equipped with state-of-the-art facilities, clubs, and athletic programs.
+        <p className="max-w-2xl text-sm md:text-base leading-relaxed text-[#1B133C]/90 font-medium mb-12">
+          School life at Sunshine Inter College goes beyond textbooks. We believe in the holistic development of our students by providing a disciplined, safe, and engaging environment. Our campus encourages students to participate in various activities, helping them build confidence and lifelong friendships.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
           {/* Card 1 */}
           <div className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-white/30 rounded-[2rem] p-8 min-h-[300px] flex flex-col justify-end">
             <div className="absolute inset-0 bg-gradient-to-t from-[#1B133C]/80 to-transparent z-0"></div>
-            {/* Fallback image style using css */}
             <div className="absolute inset-0 z-[-1] bg-[url('https://images.unsplash.com/photo-1541535650810-10d26f5c2ab3?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-40 group-hover:scale-105 transition-transform duration-700"></div>
             
             <div className="relative z-10 text-white">
               <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-full flex items-center justify-center mb-4"><Trophy size={20} /></div>
-              <h3 className="text-2xl font-bold mb-2">Athletics & Sports</h3>
-              <p className="text-sm text-white/80">Olympic-sized pool, indoor basketball courts, and sprawling fields for football and cricket.</p>
+              <h3 className="text-2xl font-bold mb-2">Sports & Physical Education</h3>
+              <p className="text-sm text-white/90 leading-relaxed">We promote physical fitness and teamwork through regular sports periods, inter-house matches, and ground activities.</p>
             </div>
           </div>
 
@@ -66,9 +63,9 @@ export default function CampusLifeWebsitePage() {
             <div className="absolute inset-0 z-[-1] bg-[url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-40 group-hover:scale-105 transition-transform duration-700"></div>
             
             <div className="relative z-10 text-white">
-              <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-full flex items-center justify-center mb-4"><Palette size={20} /></div>
-              <h3 className="text-2xl font-bold mb-2">Arts & Culture</h3>
-              <p className="text-sm text-white/80">Dedicated studios for fine arts, a 500-seat auditorium for dramatics, and regular cultural fests.</p>
+              <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-full flex items-center justify-center mb-4"><Users size={20} /></div>
+              <h3 className="text-2xl font-bold mb-2">Co-Curricular Activities</h3>
+              <p className="text-sm text-white/90 leading-relaxed">Students are encouraged to take part in debates, cultural programs, and school assemblies to develop public speaking and leadership skills.</p>
             </div>
           </div>
         </div>

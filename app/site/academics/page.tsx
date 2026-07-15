@@ -1,19 +1,19 @@
 "use client";
 import React from 'react';
-import { Users, Palette, Trophy } from 'lucide-react';
+import { BookOpen, Award, Microscope } from 'lucide-react';
 
 const instrumentSerifClass = "font-serif"; 
 const interClass = "font-sans";
 
-export default function CampusLifeWebsitePage() {
+export default function AcademicsWebsitePage() {
   return (
     <div className={`relative min-h-screen w-full overflow-y-auto overflow-x-hidden flex flex-col ${interClass} text-[#1B133C] bg-black`}>
-      {}
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
         .font-serif { font-family: 'Instrument Serif', serif; }
         .font-sans { font-family: 'Inter', sans-serif; }
       `}} />
+
       <video autoPlay muted loop playsInline className="fixed inset-0 z-0 w-full h-[130%] object-cover object-top opacity-90"
         src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260714_113715_c7e0daa0-8bdd-4486-a2da-040901f8f0ea.mp4"
       />
@@ -26,9 +26,9 @@ export default function CampusLifeWebsitePage() {
             <span className="font-bold tracking-tight text-lg hidden sm:block">Sunshine Inter College</span>
           </div>
           <div className="flex space-x-6 sm:space-x-8 text-sm font-medium text-[#1B133C]/80">
-            <a href="/site/academics" className="hover:text-[#1B133C] transition-opacity">Academics</a>
+            <a href="/site/academics" className="font-bold text-[#1B133C]">Academics</a>
             <a href="/site/admissions" className="hover:text-[#1B133C] transition-opacity">Admissions</a>
-            <a href="/site/campus-life" className="font-bold text-[#1B133C]">Campus Life</a>
+            <a href="/site/campus-life" className="hover:text-[#1B133C] transition-opacity">Campus Life</a>
             <a href="/site/contact" className="hover:text-[#1B133C] transition-opacity">Contact</a>
           </div>
           <button onClick={() => window.location.href = '/login'} className="hidden md:flex bg-[#1B133C] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1B133C]/90 transition-colors">
@@ -37,39 +37,29 @@ export default function CampusLifeWebsitePage() {
         </div>
       </nav>
 
-      {}
-      <main className="relative z-10 flex-1 flex flex-col px-4 mt-12 w-full max-w-5xl mx-auto pb-16">
-        <h1 className={`${instrumentSerifClass} text-5xl md:text-7xl leading-none tracking-tight text-[#1B133C] mb-4 drop-shadow-sm`}>
-          Beyond the <span className="italic">Classroom.</span>
+      <main className="relative z-10 flex-1 flex flex-col items-center px-4 mt-12 w-full max-w-5xl mx-auto pb-16">
+        <h1 className={`${instrumentSerifClass} text-5xl md:text-7xl lg:text-8xl leading-none tracking-tight text-[#1B133C] text-center mb-6 drop-shadow-sm`}>
+          Academic <span className="italic">Foundation</span>
         </h1>
-        <p className="max-w-2xl text-sm md:text-base leading-relaxed text-[#1B133C]/80 font-medium mb-12">
-          Education at Sunshine Inter College extends far beyond textbooks. Experience a vibrant community equipped with state-of-the-art facilities, clubs, and athletic programs.
+        <p className="max-w-2xl mx-auto text-center text-sm md:text-base leading-relaxed text-[#1B133C]/90 font-medium mb-12">
+          At Sunshine Inter College, we focus on providing a strong, well-rounded academic education. Our curriculum is carefully structured to build conceptual clarity, encourage critical thinking, and prepare students for their board examinations and future careers.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-          {/* Card 1 */}
-          <div className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-white/30 rounded-[2rem] p-8 min-h-[300px] flex flex-col justify-end">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#1B133C]/80 to-transparent z-0"></div>
-            {/* Fallback image style using css */}
-            <div className="absolute inset-0 z-[-1] bg-[url('https://images.unsplash.com/photo-1541535650810-10d26f5c2ab3?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-40 group-hover:scale-105 transition-transform duration-700"></div>
-            
-            <div className="relative z-10 text-white">
-              <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-full flex items-center justify-center mb-4"><Trophy size={20} /></div>
-              <h3 className="text-2xl font-bold mb-2">Athletics & Sports</h3>
-              <p className="text-sm text-white/80">Olympic-sized pool, indoor basketball courts, and sprawling fields for football and cricket.</p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-3xl p-8 shadow-lg hover:-translate-y-1 transition-transform">
+            <div className="w-12 h-12 bg-blue-500/10 text-blue-600 rounded-2xl flex items-center justify-center mb-6"><Microscope size={24} /></div>
+            <h3 className="text-xl font-bold mb-3">Science & Practical Learning</h3>
+            <p className="text-sm text-[#1B133C]/80 leading-relaxed">We maintain properly equipped laboratories for Physics, Chemistry, and Biology to ensure students get hands-on experience alongside theoretical knowledge.</p>
           </div>
-
-          {/* Card 2 */}
-          <div className="group relative overflow-hidden bg-white/40 backdrop-blur-md border border-white/30 rounded-[2rem] p-8 min-h-[300px] flex flex-col justify-end">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#1B133C]/80 to-transparent z-0"></div>
-            <div className="absolute inset-0 z-[-1] bg-[url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay opacity-40 group-hover:scale-105 transition-transform duration-700"></div>
-            
-            <div className="relative z-10 text-white">
-              <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-full flex items-center justify-center mb-4"><Palette size={20} /></div>
-              <h3 className="text-2xl font-bold mb-2">Arts & Culture</h3>
-              <p className="text-sm text-white/80">Dedicated studios for fine arts, a 500-seat auditorium for dramatics, and regular cultural fests.</p>
-            </div>
+          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-3xl p-8 shadow-lg hover:-translate-y-1 transition-transform">
+            <div className="w-12 h-12 bg-purple-500/10 text-purple-600 rounded-2xl flex items-center justify-center mb-6"><BookOpen size={24} /></div>
+            <h3 className="text-xl font-bold mb-3">Dedicated Faculty</h3>
+            <p className="text-sm text-[#1B133C]/80 leading-relaxed">Our teachers are experienced professionals committed to guiding students through their academic journey with patience and discipline.</p>
+          </div>
+          <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-3xl p-8 shadow-lg hover:-translate-y-1 transition-transform">
+            <div className="w-12 h-12 bg-emerald-500/10 text-emerald-600 rounded-2xl flex items-center justify-center mb-6"><Award size={24} /></div>
+            <h3 className="text-xl font-bold mb-3">Structured Curriculum</h3>
+            <p className="text-sm text-[#1B133C]/80 leading-relaxed">We follow a strict academic calendar with regular assessments, ensuring students stay on track and are fully prepared for their final exams.</p>
           </div>
         </div>
       </main>

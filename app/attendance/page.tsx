@@ -1,197 +1,119 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, Clock, CheckCircle2, XCircle, AlertCircle, BookOpen } from 'lucide-react';
+import { LayoutDashboard, BookOpen, CreditCard, Award, Calendar, Settings, Menu, X, Zap, Clock } from 'lucide-react';
+import { Instrument_Serif, Inter } from 'next/font/google';
+import { Canvas } from '@react-three/fiber';
+import { Float, Environment, Sphere, MeshDistortMaterial } from '@react-three/drei';
+
+const instrumentSerif = Instrument_Serif({ weight: '400', subsets: ['latin'], style: ['normal', 'italic'] });
+const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
+
+const FloatingCrystals = () => (
+  <div className="fixed inset-0 z-0 bg-[#F9F8FC]">
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-100/50 via-[#F9F8FC] to-amber-50/50" />
+    <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
+      <ambientLight intensity={1.5} color="#ffffff" /><directionalLight position={[10, 10, 10]} intensity={2} color="#ffffff" />
+      <Float speed={2} rotationIntensity={1} floatIntensity={2}><mesh position={[5, 3, -5]} scale={2.5}><sphereGeometry args={[1, 64, 64]} /><meshPhysicalMaterial transmission={0.9} roughness={0.1} ior={1.5} color="#ffffff" /></mesh></Float>
+      <Environment preset="city" />
+    </Canvas>
+  </div>
+);
 
 export default function AttendancePage() {
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [studentData, setStudentData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const response = await fetch('/api/student/dashboard');
-        if (response.status === 401) {
-          window.location.href = '/login';
-          return;
-        }
-        const json = await response.json();
-        if (json.success) {
-          setStudentData(json.data);
-        }
-      } catch (error) {
-        console.error("Failed to load dashboard data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchDashboardData();
+    fetch('/api/student/dashboard').then(res => res.json()).then(json => { 
+      if(json.success) setStudentData(json.data); 
+      setIsLoading(false);
+    });
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!studentData) {
-    return <div className="min-h-screen bg-black text-white p-8">No data found.</div>;
-  }
-
-  // Calculate Subject-Wise Attendance Stats
-  const subjectStats = studentData.attendance?.reduce((acc: any, record: any) => {
-    if (!acc[record.subject]) {
-      acc[record.subject] = { present: 0, absent: 0, late: 0, total: 0 };
-    }
-    acc[record.subject].total += 1;
-    if (record.status === 'PRESENT') acc[record.subject].present += 1;
-    if (record.status === 'ABSENT') acc[record.subject].absent += 1;
-    if (record.status === 'LATE') acc[record.subject].late += 1;
-    return acc;
-  }, {}) || {};
+  if (isLoading || !studentData) return (
+    <div className="min-h-screen bg-[#F9F8FC] flex flex-col items-center justify-center"><div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" /></div>
+  );
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans overflow-y-auto">
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-purple-600/10 blur-[150px] rounded-full" />
-        <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-blue-600/10 blur-[150px] rounded-full" />
-      </div>
+    <div className={`min-h-screen ${inter.className} text-[#1E1B4B] bg-[#F9F8FC] relative overflow-hidden flex flex-col`}>
+      <FloatingCrystals />
+      
+      <div className={`fixed inset-0 bg-[#1E1B4B]/20 backdrop-blur-sm z-40 transition-all duration-500 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)} />
 
-      <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <button 
-              onClick={() => window.location.href = '/'}
-              className="flex items-center text-sm text-gray-400 hover:text-white transition-colors mb-4"
-            >
-              <ArrowLeft size={16} className="mr-2" /> Back to Dashboard
-            </button>
-            <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Timetable & Attendance</h1>
-            <p className="text-gray-400">View your class schedule and subject-wise attendance history.</p>
+      <aside className={`fixed z-50 transition-transform duration-500 ease-out top-4 bottom-4 left-4 w-72 rounded-[2.5rem] border border-white bg-white/70 backdrop-blur-3xl shadow-2xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-[120%]'} flex flex-col justify-between`}>
+        <div>
+          <div className="p-8 flex items-center justify-between">
+            <div className="flex items-center space-x-3"><div className="w-10 h-10 bg-[#1E1B4B] rounded-xl flex items-center justify-center"><Zap size={20} className="text-white" /></div><span className={`${instrumentSerif.className} text-2xl`}>Sunshine</span></div>
+            <button onClick={() => setSidebarOpen(false)} className="p-2.5 rounded-full bg-white/50 hover:bg-white text-gray-500 hover:text-rose-500 transition-all shadow-sm"><X size={20} /></button>
           </div>
+          <nav className="px-6 py-2 space-y-2">
+            {[
+              { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+              { icon: Award, label: 'Transcripts', href: '/academics' },
+              { icon: CreditCard, label: 'Financials', href: '/fees' },
+              { icon: BookOpen, label: 'Assignments', href: '/assignments' },
+              { icon: Calendar, label: 'Schedule', active: true, href: '/attendance' },
+              { icon: Settings, label: 'Settings', href: '/settings' },
+            ].map((item, i) => (
+                <button key={i} onClick={() => window.location.href = item.href} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-2xl font-medium transition-all ${item.active ? 'bg-[#1E1B4B] text-white shadow-md' : 'hover:bg-white text-gray-600'}`}>
+                    <item.icon size={20} /> <span>{item.label}</span>
+                </button>
+            ))}
+          </nav>
         </div>
+      </aside>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="flex-1 h-screen overflow-y-auto relative z-10 p-6 sm:p-10 max-w-7xl mx-auto w-full">
+        <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8">
+          <div className="flex items-center space-x-4">
+            <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-2xl bg-white border border-gray-100 hover:bg-purple-50 transition-colors shadow-sm"><Menu size={20} /></button>
+            <span className="hidden sm:inline font-semibold text-gray-500 uppercase tracking-wider text-sm">Schedule</span>
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-[#1E1B4B] text-white flex items-center justify-center font-bold shadow-md">{studentData.firstName[0]}</div>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           
-          {/* Left Column: Weekly Timetable */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="text-xl font-semibold mb-6 flex items-center">
-                <Calendar className="mr-2 text-blue-400" /> Class Schedule
-              </h3>
-              
-              {studentData.class?.schedules?.length > 0 ? (
-                <div className="space-y-4">
-                  {studentData.class.schedules.map((schedule: any, i: number) => (
-                    <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-black/40 border border-white/5 hover:border-white/10 transition-colors">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400">
-                          <Clock size={20} />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-lg">{schedule.subject}</h4>
-                          <p className="text-sm text-gray-400">Room: {schedule.room}</p>
-                        </div>
-                      </div>
-                      <div className="mt-4 md:mt-0 text-right">
-                        <p className="text-sm font-medium text-white px-3 py-1 bg-white/10 rounded-lg inline-block mb-1">
-                          {schedule.dayOfWeek}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {schedule.startTime} - {schedule.endTime}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center bg-black/20 rounded-xl border border-white/5">
-                  <p className="text-gray-400">No active timetable found for your class.</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Day-Wise Attendance History Log */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="text-xl font-semibold mb-6 flex items-center">
-                <Clock className="mr-2 text-purple-400" /> Recent Attendance Log
-              </h3>
-              
-              {studentData.attendance?.length > 0 ? (
-                <div className="space-y-3">
-                  {studentData.attendance.slice(0, 10).map((record: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-black/30 border border-white/5">
-                      <div>
-                        <p className="font-medium text-gray-200">{record.subject}</p>
-                        <p className="text-xs text-gray-500">{new Date(record.date).toLocaleDateString()}</p>
-                      </div>
-                      <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        record.status === 'PRESENT' ? 'bg-emerald-500/20 text-emerald-400' :
-                        record.status === 'ABSENT' ? 'bg-rose-500/20 text-rose-400' :
-                        'bg-orange-500/20 text-orange-400'
-                      }`}>
-                        {record.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-400 text-sm py-4">No attendance records published yet.</p>
-              )}
-            </div>
+          {/* Schedule */}
+          <div className="bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] p-8 shadow-sm">
+             <h2 className={`${instrumentSerif.className} text-4xl mb-6`}>Weekly Schedule</h2>
+             {studentData.class?.schedules?.length > 0 ? (
+               <div className="space-y-4">
+                 {studentData.class.schedules.map((s:any, i:number) => (
+                   <div key={i} className="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                     <div className="flex items-center space-x-4">
+                       <div className="bg-purple-100 text-purple-600 p-3 rounded-lg"><Clock size={20} /></div>
+                       <div>
+                         <p className="font-bold text-[#1E1B4B]">{s.subject}</p>
+                         <p className="text-xs text-gray-500 font-medium">Room {s.room} • {s.dayOfWeek}</p>
+                       </div>
+                     </div>
+                     <p className="text-sm font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full">{s.startTime}</p>
+                   </div>
+                 ))}
+               </div>
+             ) : (
+               <p className="text-gray-500 italic">No schedule posted.</p>
+             )}
           </div>
 
-          {/* Right Column: Subject-Wise Attendance Breakdown */}
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/20 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="text-lg font-semibold mb-6 flex items-center">
-                <BookOpen className="mr-2 text-emerald-400" size={20} /> 
-                Subject-Wise Breakdown
-              </h3>
-              
-              {Object.keys(subjectStats).length > 0 ? (
-                <div className="space-y-6">
-                  {Object.entries(subjectStats).map(([subject, stats]: [string, any], idx) => {
-                    const percentage = Math.round((stats.present / stats.total) * 100);
-                    return (
-                      <div key={idx} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-sm text-gray-300">{subject}</span>
-                          <span className={`text-sm font-bold ${percentage >= 75 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {percentage}%
-                          </span>
-                        </div>
-                        {/* Progress Bar */}
-                        <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${percentage >= 75 ? 'bg-emerald-500' : percentage >= 50 ? 'bg-orange-500' : 'bg-rose-500'}`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                        {/* Status Counts */}
-                        <div className="flex space-x-4 text-xs text-gray-500">
-                          <span className="flex items-center"><CheckCircle2 size={12} className="text-emerald-500 mr-1" /> {stats.present}</span>
-                          <span className="flex items-center"><XCircle size={12} className="text-rose-500 mr-1" /> {stats.absent}</span>
-                          <span className="flex items-center"><AlertCircle size={12} className="text-orange-500 mr-1" /> {stats.late}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <p className="text-gray-400 text-sm">No subject data available.</p>
-                </div>
-              )}
-            </div>
+          {/* Attendance Overview */}
+          <div className="bg-[#1E1B4B] text-white rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/20 blur-2xl rounded-full -translate-y-1/2 translate-x-1/2" />
+             <h2 className={`${instrumentSerif.className} text-4xl mb-2 relative z-10`}>Attendance</h2>
+             <p className="text-white/60 text-sm mb-8 relative z-10">Your presence metrics for this semester.</p>
+             
+             <div className="text-center py-10">
+               <div className="inline-flex items-center justify-center w-40 h-40 rounded-full border-8 border-purple-500/30 relative">
+                  <div className="absolute inset-0 rounded-full border-8 border-t-emerald-400 animate-[spin_3s_linear_infinite]" />
+                  <span className={`${instrumentSerif.className} text-5xl`}>94<span className="text-2xl text-white/50">%</span></span>
+               </div>
+               <p className="mt-6 text-emerald-400 font-bold uppercase tracking-wider text-sm">Excellent Standing</p>
+             </div>
           </div>
-
         </div>
-      </div>
+      </main>
     </div>
   );
 }

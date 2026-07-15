@@ -1,197 +1,149 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, Download, FileText, TrendingUp, Award,
-  BookOpen, Calculator, Globe, FlaskConical, LayoutDashboard
-} from 'lucide-react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
-} from 'recharts';
-import { generateTranscriptPDF } from '@/lib/pdfGenerator';
+import { LayoutDashboard, BookOpen, CreditCard, Award, Calendar, Settings, Bell, Menu, X, Zap, LogOut, FileText } from 'lucide-react';
+import { signOut } from 'next-auth/react';
+import { Instrument_Serif, Inter } from 'next/font/google';
+import { Canvas } from '@react-three/fiber';
+import { Float, Environment, Sphere, MeshDistortMaterial } from '@react-three/drei';
 
-// Simulate data for the chart
-const performanceData = [
-  { term: 'Term 1', average: 85 },
-  { term: 'Term 2', average: 88 },
-  { term: 'Mid-Term', average: 84 },
-  { term: 'Term 3', average: 92 },
-  { term: 'Finals', average: 94 },
-];
+const instrumentSerif = Instrument_Serif({ weight: '400', subsets: ['latin'], style: ['normal', 'italic'] });
+const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '600', '700'] });
+
+const FloatingCrystals = () => (
+  <div className="fixed inset-0 z-0 bg-[#F9F8FC]">
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-100/50 via-[#F9F8FC] to-amber-50/50" />
+    <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
+      <ambientLight intensity={1.5} color="#ffffff" />
+      <directionalLight position={[10, 10, 10]} intensity={2} color="#ffffff" />
+      <directionalLight position={[-10, -10, -10]} intensity={1} color="#8b5cf6" />
+      <directionalLight position={[0, -10, 0]} intensity={1.5} color="#f59e0b" />
+      <Float speed={2} rotationIntensity={1} floatIntensity={2}>
+        <mesh position={[5, 3, -5]} scale={2.5}>
+          <sphereGeometry args={[1, 64, 64]} />
+          <meshPhysicalMaterial transmission={0.9} opacity={1} roughness={0.1} ior={1.5} thickness={2} color="#ffffff" />
+        </mesh>
+      </Float>
+      <Float speed={1.5} rotationIntensity={1.5} floatIntensity={1.5}>
+        <mesh position={[-6, -3, -8]} scale={3.5}>
+          <sphereGeometry args={[1, 64, 64]} />
+          <MeshDistortMaterial color="#FDF8E1" distort={0.3} speed={2} roughness={0.1} metalness={0.1} />
+        </mesh>
+      </Float>
+      {Array.from({ length: 20 }).map((_, i) => (
+        <Float key={i} speed={2 + Math.random() * 2} floatIntensity={3} rotationIntensity={2}>
+          <Sphere args={[0.03, 16, 16]} position={[(Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, -5 - Math.random() * 10]}>
+            <meshStandardMaterial color={Math.random() > 0.5 ? "#F59E0B" : "#8B5CF6"} emissive={Math.random() > 0.5 ? "#F59E0B" : "#8B5CF6"} emissiveIntensity={2} />
+          </Sphere>
+        </Float>
+      ))}
+      <Environment preset="city" />
+    </Canvas>
+  </div>
+);
 
 export default function AcademicsPage() {
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [studentData, setStudentData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch data from our existing secure API
-    const fetchAcademics = async () => {
-      try {
-        const response = await fetch('/api/student/dashboard');
-        if (response.status === 401) {
-          window.location.href = '/login';
-          return;
-        }
-        const json = await response.json();
-        if (json.success) {
-          setStudentData(json.data);
-        }
-      } catch (error) {
-        console.error("Failed to load academics", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAcademics();
+    fetch('/api/student/dashboard').then(res => res.json()).then(json => { 
+      if(json.success) setStudentData(json.data); 
+      setIsLoading(false);
+    });
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white w-full h-full">
-        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (isLoading || !studentData) return (
+    <div className="min-h-screen bg-[#F9F8FC] flex flex-col items-center justify-center text-[#1E1B4B] w-full h-full absolute inset-0">
+      <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6 shadow-xl" />
+      <p className={`${instrumentSerif.className} text-4xl animate-pulse italic tracking-wide`}>Loading Transcripts...</p>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans overflow-y-auto">
-      {/* Background */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-emerald-600/10 blur-[150px] rounded-full" />
-      </div>
+    <div className={`min-h-screen ${inter.className} text-[#1E1B4B] font-sans selection:bg-purple-200 overflow-hidden flex flex-col w-full relative bg-[#F9F8FC]`}>
+      <FloatingCrystals />
+      
+      {/* Sidebar Overlay (Closes sidebar on click) */}
+      <div 
+        className={`fixed inset-0 bg-[#1E1B4B]/20 backdrop-blur-sm z-40 transition-all duration-500 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} 
+        onClick={() => setSidebarOpen(false)} 
+      />
 
-      <div className="relative z-10 p-8 max-w-7xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <button 
-              onClick={() => window.location.href = '/'}
-              className="flex items-center text-sm text-gray-400 hover:text-white transition-colors mb-4"
-            >
-              <ArrowLeft size={16} className="mr-2" /> Back to Dashboard
-            </button>
-            <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Academic Transcript</h1>
-            <p className="text-gray-400">View and download your official grade reports.</p>
+      {/* Sidebar Drawer */}
+      <aside className={`fixed z-50 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] top-4 bottom-4 left-4 w-72 rounded-[2.5rem] border border-white bg-white/70 backdrop-blur-3xl shadow-2xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-[120%]'} flex flex-col justify-between`}>
+        <div>
+          <div className="p-8 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-[#1E1B4B] rounded-xl flex items-center justify-center"><Zap size={20} className="text-white" /></div>
+              <span className={`${instrumentSerif.className} text-2xl tracking-tight text-[#1E1B4B] leading-none mt-1`}>Sunshine<br/><span className="text-[#1E1B4B]/60 text-sm italic font-sans tracking-widest uppercase">Portal</span></span>
+            </div>
+            {/* CLOSE BUTTON */}
+            <button onClick={() => setSidebarOpen(false)} className="p-2.5 rounded-full bg-white/50 hover:bg-white text-gray-500 hover:text-rose-500 shadow-sm transition-all border border-gray-100"><X size={20} /></button>
           </div>
-          
-          <button 
-            onClick={() => generateTranscriptPDF(studentData)}
-            className="flex items-center space-x-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all font-medium"
-          >
-            <Download size={18} />
-            <span>Download PDF</span>
-          </button>
+          <nav className="px-6 py-2 space-y-2">
+            {[
+              { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+              { icon: Award, label: 'Transcripts', active: true, href: '/academics' },
+              { icon: CreditCard, label: 'Financials', href: '/fees' },
+              { icon: BookOpen, label: 'Assignments', href: '/assignments' },
+              { icon: Calendar, label: 'Schedule', href: '/attendance' },
+              { icon: Settings, label: 'Settings', href: '/settings' },
+            ].map((item, i) => (
+                <button key={i} onClick={() => window.location.href = item.href} className={`w-full flex items-center space-x-4 px-5 py-3.5 rounded-2xl transition-all duration-300 group font-medium ${item.active ? 'bg-[#1E1B4B] text-white shadow-md' : 'text-[#1E1B4B]/70 hover:bg-white hover:text-[#1E1B4B] hover:shadow-sm'}`}>
+                    <item.icon size={20} className={`shrink-0 transition-transform duration-300 group-hover:scale-110 ${item.active ? 'text-white' : ''}`} /> <span>{item.label}</span>
+                </button>
+            ))}
+          </nav>
         </div>
+      </aside>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Main Transcripts (Left side) */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="text-xl font-semibold mb-6 flex items-center">
-                <Award className="mr-2 text-blue-400" /> Latest Results
-              </h3>
-              
-              <div className="space-y-4">
-                {studentData?.results?.map((exam: any, i: number) => (
-                  <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl bg-black/40 border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="flex items-center space-x-4 mb-4 md:mb-0">
-                      <div className={`p-4 rounded-xl ${
-                        exam.marksObtained >= 90 ? 'bg-emerald-500/20 text-emerald-400' : 
-                        exam.marksObtained >= 80 ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
-                      }`}>
-                        {exam.subject.includes('Math') ? <Calculator size={24} /> : 
-                         exam.subject.includes('Physics') ? <FlaskConical size={24} /> : 
-                         <BookOpen size={24} />}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-lg">{exam.subject}</h4>
-                        <p className="text-sm text-gray-400">{exam.examName}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-8">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-400 mb-1">Score</p>
-                        <p className="text-2xl font-bold">{exam.marksObtained}<span className="text-gray-500 text-lg">/{exam.totalMarks}</span></p>
-                      </div>
-                      <div className="w-px h-12 bg-white/10 hidden md:block"></div>
-                      <div className="text-right min-w-[80px]">
-                        <p className="text-sm text-gray-400 mb-1">Grade</p>
-                        <p className={`text-2xl font-bold ${
-                          exam.grade.includes('A') ? 'text-emerald-400' : 
-                          exam.grade.includes('B') ? 'text-blue-400' : 'text-orange-400'
-                        }`}>{exam.grade}</p>
-                      </div>
-                      <button 
-                        onClick={() => generateTranscriptPDF(studentData, [exam])}
-                        className="ml-6 p-3 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                        title="Download Single Certificate"
-                      >
-                        <Download size={18} />
-                      </button>
-                    </div>
+      {/* Main Content */}
+      <main className="flex-1 h-screen overflow-y-auto relative z-10 scroll-smooth">
+        <header className="sticky top-6 z-30 mx-6 sm:mx-10 max-w-7xl xl:mx-auto bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="flex items-center space-x-4">
+            {/* OPEN BUTTON */}
+            <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-2xl bg-white border border-gray-100 text-[#1E1B4B] hover:bg-purple-50 hover:text-purple-700 transition-colors shadow-sm"><Menu size={20} /></button>
+            <div className="hidden sm:flex items-center space-x-2 text-sm font-semibold text-[#1E1B4B]/60 tracking-wider uppercase"><span>Academic Results</span></div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 rounded-2xl bg-[#1E1B4B] text-white flex items-center justify-center font-bold text-sm shadow-md">{studentData.firstName[0]}</div>
+          </div>
+        </header>
+
+        <div className="p-6 sm:p-10 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <div className="bg-gradient-to-br from-[#1E1B4B] to-[#312E81] text-white border border-transparent rounded-[2rem] p-10 mb-8 relative overflow-hidden shadow-xl">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+             <h1 className={`${instrumentSerif.className} text-5xl sm:text-6xl tracking-tight mb-2 relative z-10`}>Transcripts</h1>
+             <p className="text-white/70 font-medium relative z-10">Your complete academic history and examination results.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           {studentData.results?.length > 0 ? studentData.results.map((exam: any, i: number) => (
+             <div key={i} className="bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] p-7 flex justify-between items-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-lg transition-all">
+                <div className="flex items-center space-x-4">
+                  <div className={`p-4 rounded-xl shadow-sm ${exam.marksObtained >= 90 ? 'bg-emerald-50 text-emerald-600' : exam.marksObtained >= 80 ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                    <FileText size={24} />
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div>
+                    <h3 className="font-bold text-xl text-[#1E1B4B]">{exam.subject}</h3>
+                    <p className="text-gray-500 text-sm">{exam.examName}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                    <p className={`${instrumentSerif.className} text-4xl text-[#1E1B4B]`}>{exam.marksObtained}<span className="text-xl text-gray-400">/{exam.totalMarks}</span></p>
+                    <p className={`text-sm font-bold uppercase tracking-wider mt-1 ${exam.marksObtained >= 80 ? 'text-emerald-600' : 'text-orange-600'}`}>Grade {exam.grade}</p>
+                </div>
+             </div>
+           )) : (
+             <div className="col-span-1 md:col-span-2 p-10 bg-white/60 backdrop-blur-2xl border border-white rounded-[2rem] text-center shadow-sm">
+                <Award size={48} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500 font-medium">No academic results published yet.</p>
+             </div>
+           )}
           </div>
-
-          {/* Analytics (Right side) */}
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-indigo-900/40 to-blue-900/20 border border-indigo-500/20 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="text-lg font-semibold mb-2">Cumulative GPA</h3>
-              <p className="text-5xl font-bold tracking-tight mb-2">3.8<span className="text-2xl text-indigo-300 font-normal">/4.0</span></p>
-              <p className="text-sm flex items-center text-emerald-400">
-                <TrendingUp size={16} className="mr-1" /> +0.2 from last semester
-              </p>
-            </div>
-
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-              <h3 className="text-lg font-semibold mb-6 flex items-center">
-                <TrendingUp className="mr-2 text-emerald-400" size={20} /> 
-                Performance Trend
-              </h3>
-              
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={performanceData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                    <XAxis 
-                      dataKey="term" 
-                      stroke="#ffffff50" 
-                      fontSize={12} 
-                      tickLine={false} 
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      domain={[70, 100]} 
-                      stroke="#ffffff50" 
-                      fontSize={12} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#18181b', borderColor: '#ffffff20', borderRadius: '8px' }}
-                      itemStyle={{ color: '#60a5fa' }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="average" 
-                      stroke="#60a5fa" 
-                      strokeWidth={3}
-                      dot={{ fill: '#000', stroke: '#60a5fa', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6, fill: '#3b82f6' }} 
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
         </div>
-      </div>
+      </main>
     </div>
   );
 }
