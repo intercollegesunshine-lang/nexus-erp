@@ -187,6 +187,7 @@ export default function StudentApp() {
               <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
               <span className="font-bold text-lg tracking-tight text-white">Sunshine<span className="text-white/40 font-medium"> Portal</span></span>
             </div>
+            
             <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors">
               <X size={18} />
             </button>
@@ -199,7 +200,11 @@ export default function StudentApp() {
             ))}
           </nav>
         </div>
+        
         <div className="p-4 border-t border-white/5">
+          <button onClick={() => signOut({ callbackUrl: '/login' })} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-semibold text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+            <LogOut size={14} /> Sign Out
+          </button>
           <div className="p-4 rounded-xl border border-white/10 bg-white/5 flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00d2ff] to-[#0B2551] flex items-center justify-center font-bold text-sm text-white border border-white/20">
               {studentData.firstName[0]}{studentData.lastName[0]}
@@ -209,9 +214,6 @@ export default function StudentApp() {
               <p className="text-xs text-[#A4F4FD] truncate">Grade {studentData.gradeLevel}</p>
             </div>
           </div>
-          <button onClick={() => signOut({ callbackUrl: '/login' })} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-semibold text-white/50 hover:text-white hover:bg-white/5 transition-colors">
-            <LogOut size={14} /> Sign Out
-          </button>
         </div>
       </aside>
 
