@@ -1,8 +1,29 @@
 "use client";
 import React, { useState } from 'react';
-import { Mail, Lock, Zap, ArrowRight, ShieldCheck } from 'lucide-react';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+
+// --- MOCK ENVIRONMENT SETUP ---
+// We mock these Next.js specific functions so the UI compiles in this environment.
+// In your actual Next.js project, you should use the real imports:
+// import { signIn } from 'next-auth/react';
+// import { useRouter } from 'next/navigation';
+// import { Instrument_Serif, Inter } from 'next/font/google';
+
+const signIn = async (provider: string, options: any) => {
+  console.log(`Mock sign in via ${provider}`);
+  setTimeout(() => { alert(`Success! Redirecting to ${options?.callbackUrl || '/'}`); }, 1000);
+  return { error: null };
+};
+
+const useRouter = () => ({
+  push: (url: string) => alert(`Mock router push to: ${url}`),
+  refresh: () => console.log('Mock router refresh')
+});
+
+// Since next/font is unavailable, we use standard tailwind classes
+// and assume the fonts are loaded via standard CSS imports for the preview.
+const instrumentSerifClass = "font-serif"; 
+const interClass = "font-sans";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,14 +32,14 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
 
-  // REAL Custom Credentials Login
+  // Custom Credentials Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
       const result = await signIn('credentials', {
-        redirect: false, // Don't let NextAuth handle the redirect, we will do it manually to check role
+        redirect: false, 
         email,
         password,
       });
@@ -27,17 +48,12 @@ export default function LoginPage() {
         alert("Invalid email or password!");
         setIsLoading(false);
       } else {
-        // Since we are using NextAuth, it will automatically handle the session cookie.
-        // We fetch the session client-side to check the role.
-        const sessionRes = await fetch('/api/auth/session');
-        const sessionData = await sessionRes.json();
-
-        if (sessionData?.user && sessionData.user.role === 'ADMIN') {
+        // Mock role routing
+        if (email.includes('admin')) {
           router.push('/admin');
         } else {
           router.push('/');
         }
-        
         router.refresh();
       }
     } catch (err) {
@@ -47,49 +63,86 @@ export default function LoginPage() {
     }
   };
 
-  // REAL Google Login
+  // Google Login
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
-    // Google sign in handles redirection automatically based on the NextAuth config
     await signIn('google', { callbackUrl: '/' }); 
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden selection:bg-indigo-500/30">
+    <div className={`relative h-screen w-full overflow-y-auto overflow-x-hidden flex flex-col ${interClass} text-[#1B133C] bg-black`}>
       
-      {/* Animated Background Orbs */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 blur-[120px] rounded-full mix-blend-screen" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-600/20 blur-[120px] rounded-full mix-blend-screen" />
-      </div>
+      {/* Fallback CSS to load fonts in this preview environment */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap');
+        .font-serif { font-family: 'Instrument Serif', serif; }
+        .font-sans { font-family: 'Inter', sans-serif; }
+      `}} />
 
-      <div className="w-full max-w-md p-8 z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out">
-        
-        {/* Brand Header */}
-        <div className="flex flex-col items-center justify-center mb-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 mb-6 relative overflow-hidden">
-            <Zap size={32} className="text-white relative z-10" />
+      {/* 3D Animated Background Video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="fixed inset-0 z-0 w-full h-[130%] object-cover object-top opacity-90"
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260714_113715_c7e0daa0-8bdd-4486-a2da-040901f8f0ea.mp4"
+      />
+
+      {/* Navigation Bar */}
+      <nav className="relative z-10 w-full pt-4 md:pt-6 flex justify-center px-4">
+        <div className="bg-white/70 backdrop-blur-md rounded-xl px-4 md:px-6 py-3 shadow-sm flex items-center space-x-10">
+          
+          {/* Official Logo */}
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.href = '/login'}>
+            <img src="/logo.png" alt="Sunshine Inter College Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
+            <span className="font-bold tracking-tight text-lg">Sunshine Inter College</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 mb-2">
-            Welcome to Nexus
-          </h1>
-          <p className="text-gray-400 text-sm">
-            Sign in to access your student portal
-          </p>
+          
+          {/* Nav Links */}
+          <div className="hidden sm:flex space-x-8 text-sm font-medium text-[#1B133C]/80">
+            <a href="/site/academics" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Academics</a>
+            <a href="/site/admissions" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Admissions</a>
+            <a href="/site/campus-life" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Campus Life</a>
+            <a href="/site/contact" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Contact</a>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Content & Login Form */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 mt-8 md:mt-12 w-full max-w-5xl mx-auto text-center pb-12">
+        
+        {/* Badge */}
+        <div className="mb-6 inline-flex items-center rounded-xl border border-[#1B133C]/10 bg-white/70 backdrop-blur-sm px-4 py-2 text-sm font-medium">
+          <div className="bg-orange-500 rounded w-5 h-5 flex items-center justify-center mr-2 text-white font-bold text-xs">
+            S
+          </div>
+          Official Digital Campus
         </div>
 
-        {/* Glassmorphism Login Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+        {/* Heading */}
+        <h1 className={`${instrumentSerifClass} text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-tight text-[#1B133C] max-w-4xl mx-auto drop-shadow-sm`}>
+          Welcome to <br />
+          <span className="italic">Sunshine Inter College</span>
+        </h1>
+
+        {/* Subtitle */}
+        <p className="mt-5 sm:mt-6 max-w-2xl mx-auto text-xs sm:text-sm md:text-base leading-relaxed text-[#1B133C]/70 font-medium">
+          Access your intelligent student portal to track academic progress, manage fee payments, and submit assignments — all securely in one place.
+        </p>
+
+        {/* Glassmorphism Login Form */}
+        <div className="mt-10 sm:mt-12 w-full max-w-md bg-white/50 backdrop-blur-2xl border border-white/40 rounded-[2rem] p-6 sm:p-8 shadow-[0_16px_40px_-12px_rgba(27,19,60,0.15)] text-left mx-auto">
           
           {/* GOOGLE SIGN IN BUTTON */}
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={isGoogleLoading || isLoading}
-            className="w-full flex items-center justify-center space-x-3 bg-white text-black font-medium py-3 rounded-xl hover:bg-gray-100 transition-colors mb-6"
+            className="w-full flex items-center justify-center space-x-3 bg-white/80 backdrop-blur-md border border-[#1B133C]/10 text-[#1B133C] font-semibold py-3.5 rounded-xl hover:bg-white transition-colors mb-6 shadow-sm"
           >
             {isGoogleLoading ? (
-              <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#1B133C]/30 border-t-[#1B133C] rounded-full animate-spin" />
             ) : (
               <>
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -104,35 +157,35 @@ export default function LoginPage() {
           </button>
 
           <div className="flex items-center space-x-4 mb-6">
-            <div className="flex-1 h-px bg-white/10"></div>
-            <span className="text-xs text-gray-500 font-medium">OR USE EMAIL</span>
-            <div className="flex-1 h-px bg-white/10"></div>
+            <div className="flex-1 h-px bg-[#1B133C]/10"></div>
+            <span className="text-xs text-[#1B133C]/50 font-bold uppercase tracking-wider">Or Use Email</span>
+            <div className="flex-1 h-px bg-[#1B133C]/10"></div>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300 ml-1">Email</label>
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1B133C]/80 ml-1">Work or Student Email</label>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#1B133C]/40 group-focus-within:text-[#1B133C]/70 transition-colors">
                   <Mail size={18} />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@nexus.edu"
+                  placeholder="student@sunshine.edu"
                   required
-                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-300"
+                  className="w-full bg-white/70 backdrop-blur-sm border border-[#1B133C]/10 rounded-xl py-3.5 pl-11 pr-4 text-[#1B133C] placeholder-[#1B133C]/40 focus:outline-none focus:ring-2 focus:ring-[#1B133C]/20 focus:border-[#1B133C]/30 transition-all duration-300 font-medium"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between ml-1">
-                <label className="text-sm font-medium text-gray-300">Password</label>
+                <label className="text-sm font-semibold text-[#1B133C]/80">Password</label>
               </div>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#1B133C]/40 group-focus-within:text-[#1B133C]/70 transition-colors">
                   <Lock size={18} />
                 </div>
                 <input
@@ -141,7 +194,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-300"
+                  className="w-full bg-white/70 backdrop-blur-sm border border-[#1B133C]/10 rounded-xl py-3.5 pl-11 pr-4 text-[#1B133C] placeholder-[#1B133C]/40 focus:outline-none focus:ring-2 focus:ring-[#1B133C]/20 focus:border-[#1B133C]/30 transition-all duration-300 font-medium tracking-wide"
                 />
               </div>
             </div>
@@ -149,25 +202,26 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading || isGoogleLoading}
-              className="w-full relative flex items-center justify-center space-x-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium py-3.5 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-[0.98] disabled:opacity-50"
+              className="w-full mt-2 relative flex items-center justify-center space-x-2 bg-[#FEFEFE] px-6 sm:px-8 py-3.5 rounded-xl text-sm font-semibold text-[#1B133C] shadow-[0px_4px_12px_rgba(0,0,0,0.15)] hover:shadow-[0px_6px_16px_rgba(0,0,0,0.2)] transition-all duration-300 disabled:opacity-70 disabled:pointer-events-none group"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-[#1B133C]/30 border-t-[#1B133C] rounded-full animate-spin" />
               ) : (
                 <>
-                  <span className="relative z-10">Sign In Securely</span>
-                  <ArrowRight size={18} className="relative z-10" />
+                  <span className="relative z-10">Access Portal</span>
+                  <ArrowRight size={18} className="relative z-10 group-hover:translate-x-1 transition-transform duration-300" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8 flex items-center justify-center space-x-2 text-xs text-gray-500">
-            <ShieldCheck size={14} className="text-emerald-500/70" />
-            <span>Protected by Nexus Enterprise Security</span>
+          <div className="mt-8 flex items-center justify-center space-x-2 text-xs font-medium text-[#1B133C]/60">
+            <ShieldCheck size={16} className="text-emerald-600/80" />
+            <span>Encrypted & Secured Workspace</span>
           </div>
         </div>
-      </div>
+
+      </main>
     </div>
   );
 }
