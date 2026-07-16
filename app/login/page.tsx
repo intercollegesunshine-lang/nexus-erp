@@ -178,7 +178,7 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="student@sunshine.edu"
           required
-          className="w-full bg-transparent border border-white/30 rounded-xl py-3.5 pl-11 pr-4 text-[#1B133C] placeholder-[#1B133C]/40 focus:outline-none focus:ring-2 focus:ring-[#1B133C]/20 focus:border-[#1B133C]/30 transition-all duration-300 font-medium"
+          className="w-full bg-transparent backdrop-blur-2xl border border-white/30 rounded-xl py-3.5 pl-11 pr-4 text-[#1B133C] placeholder-[#1B133C]/40 focus:outline-none focus:ring-2 focus:ring-[#1B133C]/20 focus:border-[#1B133C]/30 transition-all duration-300 font-medium"
         />
       </div>
     </div>
@@ -199,7 +199,7 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
           required
-          className="w-full bg-transparent border border-white/30 rounded-xl py-3.5 pl-11 pr-4 text-[#1B133C] placeholder-[#1B133C]/40 focus:outline-none focus:ring-2 focus:ring-[#1B133C]/20 focus:border-[#1B133C]/30 transition-all duration-300 font-medium tracking-wide"
+          className="w-full bg-transparent backdrop-blur-2xl border border-white/30 rounded-xl py-3.5 pl-11 pr-4 text-[#1B133C] placeholder-[#1B133C]/40 focus:outline-none focus:ring-2 focus:ring-[#1B133C]/20 focus:border-[#1B133C]/30 transition-all duration-300 font-medium tracking-wide"
         />
       </div>
     </div>
