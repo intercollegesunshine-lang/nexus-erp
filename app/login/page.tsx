@@ -50,25 +50,65 @@ export default function LoginPage() {
       <video autoPlay muted loop playsInline className="fixed inset-0 z-0 w-full h-[130%] object-cover object-top opacity-90" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260714_113715_c7e0daa0-8bdd-4486-a2da-040901f8f0ea.mp4" />
 
       <nav className="relative z-10 w-full pt-4 md:pt-6 flex justify-center px-4">
-        <div className="bg-white/70 backdrop-blur-md rounded-xl px-4 md:px-6 py-3 shadow-sm flex items-center space-x-10">
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.href = '/login'}>
-            <img src="/logo.png" alt="Sunshine Inter College Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
-            <span className="font-bold tracking-tight text-lg">Sunshine Inter College</span>
-          </div>
-          <div className="hidden sm:flex space-x-8 text-sm font-medium text-[#1B133C]/80">
-            <a href="/site/academics" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Academics</a>
-            <a href="/site/admissions" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Admissions</a>
-            <a href="/site/campus-life" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Campus Life</a>
-            <a href="/site/contact" className="hover:opacity-100 hover:text-[#1B133C] transition-opacity">Contact</a>
-          </div>
-        </div>
-      </nav>
+  <div className="bg-transparent backdrop-blur-md rounded-xl px-4 md:px-6 py-3 flex items-center space-x-10">
+
+    <div
+      className="flex items-center space-x-3 cursor-pointer"
+      onClick={() => (window.location.href = "/login")}
+    >
+      <img
+        src="/logo.png"
+        alt="Sunshine Inter College Logo"
+        className="w-10 h-10 object-contain"
+      />
+
+      <span className="font-extrabold tracking-tight text-xl text-black">
+        Sunshine Inter College
+      </span>
+    </div>
+
+    <div className="hidden sm:flex space-x-8 text-base font-bold text-black">
+      <a
+        href="/site/academics"
+        className="hover:text-gray-700 transition-colors duration-200"
+      >
+        Academics
+      </a>
+
+      <a
+        href="/site/admissions"
+        className="hover:text-gray-700 transition-colors duration-200"
+      >
+        Admissions
+      </a>
+
+      <a
+        href="/site/gallery"
+        className="hover:text-gray-700 transition-colors duration-200"
+      >
+        Gallery
+      </a>
+
+      <a
+        href="/site/campus-life"
+        className="hover:text-gray-700 transition-colors duration-200"
+      >
+        Campus Life
+      </a>
+
+      <a
+        href="/site/contact"
+        className="hover:text-gray-700 transition-colors duration-200"
+      >
+        Contact
+      </a>
+    </div>
+
+  </div>
+</nav>
 
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 mt-8 md:mt-12 w-full max-w-5xl mx-auto text-center pb-12">
-        <div className="mb-6 inline-flex items-center rounded-xl border border-[#1B133C]/10 bg-white/70 backdrop-blur-sm px-4 py-2 text-sm font-medium">
-          <div className="bg-orange-500 rounded w-5 h-5 flex items-center justify-center mr-2 text-white font-bold text-xs">S</div>
-          Official Digital Campus
-        </div>
+        
 
         <h1 className={`${instrumentSerif.className} text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-tight text-[#1B133C] max-w-4xl mx-auto drop-shadow-sm`}>
           Welcome to <br />
