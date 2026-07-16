@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, BookOpen, CreditCard, Award, Calendar, Settings, Menu, X, LogOut, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, BookOpen, CreditCard, Award, Calendar, Settings, Menu, X, Download, CheckCircle2, Clock, LogOut } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { generateReceiptPDF } from '@/lib/pdfGenerator';
 
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -21,10 +22,9 @@ export default function FeesPage() {
 
   useEffect(() => {
     setFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
-    fetch('/api/student/dashboard', { headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }})
-      .then(res => res.json()).then(json => { 
-        if(json.success) setStudentData(json.data); setIsLoading(false);
-      });
+    fetch('/api/student/dashboard', { headers: { 'Cache-Control': 'no-cache, no-store' } }).then(res => res.json()).then(json => { 
+      if(json.success) setStudentData(json.data); setIsLoading(false);
+    });
   }, []);
 
   if (isLoading || !studentData) return (
@@ -39,9 +39,6 @@ export default function FeesPage() {
       </div>
     </div>
   );
-
-  const pendingFees = studentData.fees?.filter((f:any) => f.status === 'PENDING') || [];
-  const paidFees = studentData.fees?.filter((f:any) => f.status === 'PAID') || [];
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
@@ -94,58 +91,43 @@ export default function FeesPage() {
         </div>
 
         <div className="max-w-4xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10">
-              <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-white mb-2">Pending Dues.</h1>
-              <p className="text-white/50 text-sm font-medium">Manage your active invoices securely via Razorpay.</p>
-            </motion.div>
-            
-            {pendingFees.length > 0 ? (
-                <div className="space-y-4 mb-16">
-                  {pendingFees.map((f:any, i:number) => (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.1 }} key={i} className="liquid-glass rounded-3xl p-6 md:p-8 flex flex-col sm:flex-row justify-between sm:items-center gap-6 group hover:bg-white/[0.04] transition-colors relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff5f57]/10 rounded-bl-full blur-xl -z-10" />
-                        <div>
-                          <p className="font-semibold text-xl text-white">{f.title}</p>
-                          <p className="text-sm text-white/50 mt-1 font-medium flex items-center gap-2">
-                            <Calendar size={14} className="text-[#ff5f57]" /> Due: {new Date(f.dueDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 border-t sm:border-0 border-white/10 pt-5 sm:pt-0">
-                          <p className="text-4xl font-bold tracking-tight text-white">${f.amount.toLocaleString()}</p>
-                          <button onClick={() => window.location.href = '/payments'} className="w-full sm:w-auto rounded-full bg-white text-black font-semibold text-sm px-8 py-3.5 hover:bg-white/90 transition-all active:scale-95 whitespace-nowrap shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                            Pay Now
-                          </button>
-                        </div>
-                    </motion.div>
-                  ))}
-                </div>
-            ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="liquid-glass rounded-3xl p-16 text-center mb-16 border-t-4 border-t-[#28c840]">
-                  <div className="w-16 h-16 rounded-full bg-[#28c840]/10 flex items-center justify-center mx-auto mb-4 border border-[#28c840]/20"><CheckCircle2 size={32} className="text-[#28c840]" /></div>
-                  <h3 className="text-xl font-bold text-white mb-1">Account Cleared!</h3>
-                  <p className="text-white/50 text-sm font-medium">You have no pending invoices at this time.</p>
-                </motion.div>
-            )}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10">
+            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-white mb-2">Financials.</h1>
+            <p className="text-white/50 text-sm font-medium">Your payment history and fee invoices.</p>
+          </motion.div>
 
-            {paidFees.length > 0 && (
-               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-                 <h2 className="text-lg font-bold text-white/60 uppercase tracking-widest mb-6 px-2">Payment History</h2>
-                 <div className="space-y-3">
-                   {paidFees.map((f:any, i:number) => (
-                      <div key={i} className="flex justify-between items-center p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-colors">
-                        <div>
-                           <p className="text-sm font-medium text-white">{f.title}</p>
-                           <p className="text-xs text-white/40 mt-1">{new Date(f.updatedAt).toLocaleDateString()}</p>
-                        </div>
-                        <div className="text-right">
-                           <p className="text-sm font-bold text-white">${f.amount.toLocaleString()}</p>
-                           <span className="text-[10px] font-bold text-[#28c840] uppercase tracking-widest">Paid</span>
-                        </div>
-                      </div>
-                   ))}
+          <div className="space-y-4">
+            {studentData.fees?.length > 0 ? studentData.fees.map((fee: any, i: number) => (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.1 }} key={i} className="liquid-glass rounded-3xl p-6 md:p-8 flex flex-col md:flex-row justify-between md:items-center gap-6 group hover:bg-white/[0.04] transition-colors">
+                 <div className="flex items-center gap-5">
+                   <div className={`p-4 rounded-2xl border border-white/10 ${fee.status === 'PAID' ? 'bg-[#28c840]/10 text-[#28c840]' : 'bg-[#ff5f57]/10 text-[#ff5f57]'}`}>
+                     {fee.status === 'PAID' ? <CheckCircle2 size={24} /> : <Clock size={24} />}
+                   </div>
+                   <div>
+                     <h3 className="font-semibold text-xl text-white mb-1">{fee.title}</h3>
+                     <p className="text-white/40 text-sm font-medium">Due: {new Date(fee.dueDate).toLocaleDateString()}</p>
+                   </div>
                  </div>
-               </motion.div>
+                 <div className="flex items-center gap-6">
+                    <div className="text-right">
+                        <p className="text-3xl font-bold tracking-tight text-white">${fee.amount.toLocaleString()}</p>
+                        <p className={`text-xs font-bold tracking-widest uppercase mt-1 ${fee.status === 'PAID' ? 'text-[#28c840]' : 'text-[#ff5f57]'}`}>{fee.status}</p>
+                    </div>
+                    {fee.status === 'PAID' && (
+                       <button onClick={() => generateReceiptPDF(studentData, fee)} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10">
+                          <Download size={20} />
+                       </button>
+                    )}
+                 </div>
+              </motion.div>
+            )) : (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="liquid-glass rounded-3xl p-16 text-center">
+                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4 border border-white/10"><CreditCard size={32} className="text-white/40" /></div>
+                 <h3 className="text-lg font-semibold text-white mb-1">No Records Found</h3>
+                 <p className="text-white/50 text-sm">Your payment history will appear here once processed.</p>
+              </motion.div>
             )}
+          </div>
         </div>
       </main>
     </div>
