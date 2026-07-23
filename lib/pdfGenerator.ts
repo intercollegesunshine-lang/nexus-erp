@@ -66,7 +66,7 @@ export const generateReceiptPDF = (student: any, transaction: any) => {
   // Header & Branding
   doc.setFontSize(22);
   doc.setTextColor(225, 29, 72); // Rose-600
-  doc.text("NEXUS ACADEMY", pageWidth / 2, 20, { align: "center" });
+  doc.text("SUNSHINE INTER COLLEGE", pageWidth / 2, 20, { align: "center" });
 
   doc.setFontSize(14);
   doc.setTextColor(100, 100, 100);

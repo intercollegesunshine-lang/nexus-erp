@@ -22,9 +22,14 @@ export default function PaymentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [fact, setFact] = useState("");
+  const [targetInvoiceId, setTargetInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     setFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
+    
+    // 1. Read the URL to see if a specific invoice was clicked
+    const params = new URLSearchParams(window.location.search);
+    setTargetInvoiceId(params.get('invoice'));
     
     // Load Razorpay Script
     const script = document.createElement("script");
@@ -40,10 +45,17 @@ export default function PaymentsPage() {
       });
   }, []);
 
-  const pendingFees = studentData?.fees?.filter((f: any) => f.status === 'PENDING') || [];
+  // 2. Filter logic based on the URL
+  let pendingFees = studentData?.fees?.filter((f: any) => f.status === 'PENDING') || [];
+  
+  // If we clicked a specific single invoice, filter the list down to JUST that one invoice!
+  if (targetInvoiceId) {
+    pendingFees = pendingFees.filter((f: any) => f.id === targetInvoiceId);
+  }
+
   const totalAmount = pendingFees.reduce((sum: number, fee: any) => sum + fee.amount, 0);
   const combinedTitle = pendingFees.length > 1 ? `${pendingFees.length} Pending Dues (Combined)` : (pendingFees[0]?.title || '');
-  const combinedIds = pendingFees.map((f: any) => f.id).join(','); // Join all IDs with a comma
+  const combinedIds = pendingFees.map((f: any) => f.id).join(',');
 
   const pendingFee = pendingFees.length > 0 ? {
     id: combinedIds,
@@ -56,7 +68,7 @@ export default function PaymentsPage() {
     setIsProcessing(true);
 
     try {
-      // 1. Create Razorpay Order
+      // Create Razorpay Order
       const res = await fetch('/api/payments/razorpay/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,7 +82,7 @@ export default function PaymentsPage() {
         return;
       }
 
-      // 2. Open Razorpay Checkout Window
+      // Open Razorpay Checkout Window
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
@@ -79,7 +91,7 @@ export default function PaymentsPage() {
         description: pendingFee.title,
         order_id: orderData.orderId,
         handler: async function (response: any) {
-          // 3. Verify Payment Signature
+          // Verify Payment Signature
           const verifyRes = await fetch('/api/payments/razorpay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

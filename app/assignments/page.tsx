@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, BookOpen, CreditCard, Award, Calendar, Settings, Menu, X, Upload, LogOut, CheckCircle2, Sparkles } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+import { LayoutDashboard, BookOpen, CreditCard, Award, Calendar, Settings, Menu, X, Upload, CheckCircle2, Sparkles, Link as LinkIcon } from 'lucide-react';
+import { UploadDropzone } from "@/lib/uploadthing";
 
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -19,12 +19,57 @@ export default function AssignmentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fact, setFact] = useState("");
 
+  // NEW: States for the submission modal
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+  const [linkInput, setLinkInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // NEW: Reusable fetch function so we can refresh the data after submitting!
+  const fetchData = () => {
+    fetch('/api/student/dashboard', { headers: { 'Cache-Control': 'no-cache, no-store' } })
+      .then(res => res.json())
+      .then(json => { 
+        if(json.success) setStudentData(json.data); 
+        setIsLoading(false);
+      });
+  };
+
   useEffect(() => {
     setFact(FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)]);
-    fetch('/api/student/dashboard', { headers: { 'Cache-Control': 'no-cache, no-store' } }).then(res => res.json()).then(json => { 
-      if(json.success) setStudentData(json.data); setIsLoading(false);
-    });
+    fetchData();
   }, []);
+
+  // NEW: Function to handle the actual submission to your database
+  const handleSubmission = async (fileUrl: string) => {
+    if (!fileUrl) return alert("Please provide a file or link.");
+    setIsSubmitting(true);
+    
+    try {
+      const res = await fetch('/api/student/assignments/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          assignmentId: selectedAssignmentId, 
+          fileUrl: fileUrl 
+        })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setIsSubmitModalOpen(false);
+        setSelectedAssignmentId(null);
+        setLinkInput("");
+        fetchData(); // Refresh the assignments list instantly!
+      } else {
+        alert("Failed to submit: " + data.error);
+      }
+    } catch (error) {
+      alert("Network error occurred.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading || !studentData) return (
     <div className="min-h-screen text-white bg-[#0c0c0c] flex items-center justify-center relative overflow-hidden">
@@ -110,7 +155,13 @@ export default function AssignmentsPage() {
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-white/10 pt-6 gap-4">
                       <span className="text-xs font-medium text-white/40 flex items-center gap-1.5"><Calendar size={14}/> Due: {new Date(a.dueDate).toLocaleDateString()}</span>
-                      <button disabled={isSubmitted} className={`w-full sm:w-auto rounded-full px-6 py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all ${isSubmitted ? 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10' : 'bg-white text-black hover:bg-white/90 active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.2)]'}`}>
+                      
+                      {/* NEW: Updated onClick to open the modal */}
+                      <button 
+                        onClick={() => { setSelectedAssignmentId(a.id); setIsSubmitModalOpen(true); }}
+                        disabled={isSubmitted} 
+                        className={`w-full sm:w-auto rounded-full px-6 py-3.5 text-sm font-bold flex items-center justify-center gap-2 transition-all ${isSubmitted ? 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10' : 'bg-white text-black hover:bg-white/90 active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.2)]'}`}
+                      >
                         {!isSubmitted && <Upload size={16} />}
                         <span>{isSubmitted ? 'Task Completed' : 'Submit Work'}</span>
                       </button>
@@ -127,6 +178,84 @@ export default function AssignmentsPage() {
           </div>
         </div>
       </main>
+
+      {/* NEW: The Submission Modal */}
+      <AnimatePresence>
+        {isSubmitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#00d2ff]/10 blur-3xl rounded-full -z-10" />
+              
+              <div className="flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-white tracking-tight">Submit Work</h3>
+                <button onClick={() => { setIsSubmitModalOpen(false); setLinkInput(''); }} className="text-white/40 hover:text-white transition-colors bg-white/5 p-2 rounded-full">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Option 1: File Upload */}
+                <div>
+                  <label className="block text-xs font-bold text-[#00d2ff] uppercase tracking-widest mb-3">Option 1: File Upload</label>
+                  <div className="bg-white/5 rounded-2xl border border-white/10 p-4">
+                    <UploadDropzone
+                      endpoint="timetableUploader" // Reusing this endpoint as it accepts PDFs and Images!
+                      onClientUploadComplete={(res) => handleSubmission(res[0].url)}
+                      onUploadError={(error: Error) => alert(`Upload Failed: ${error.message}`)}
+                      appearance={{
+                        container: "border-dashed border-white/20 hover:border-[#00d2ff]/50 transition-colors p-4",
+                        uploadIcon: "text-[#00d2ff] h-6 w-6 mb-2",
+                        label: "text-white/80 text-sm hover:text-[#00d2ff]",
+                        button: "bg-[#00d2ff] text-black font-bold hover:bg-[#00d2ff]/90 w-full mt-4"
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1 h-px bg-white/10"></div>
+                  <span className="text-xs text-white/30 font-bold uppercase tracking-widest">OR</span>
+                  <div className="flex-1 h-px bg-white/10"></div>
+                </div>
+
+                {/* Option 2: Paste Link */}
+                <form onSubmit={(e) => { e.preventDefault(); handleSubmission(linkInput); }}>
+                  <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Option 2: Paste URL (Google Drive, Docs, etc.)</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-white/30">
+                        <LinkIcon size={16} />
+                      </div>
+                      <input 
+                        type="url" 
+                        required 
+                        value={linkInput}
+                        onChange={(e) => setLinkInput(e.target.value)}
+                        placeholder="https://docs.google.com/..." 
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-[#00d2ff]/50 transition-colors placeholder:text-white/20"
+                      />
+                    </div>
+                    <button 
+                      type="submit" 
+                      disabled={isSubmitting || !linkInput}
+                      className="px-4 bg-white text-black font-bold rounded-xl text-sm hover:bg-white/90 transition-colors disabled:opacity-50"
+                    >
+                      {isSubmitting ? '...' : 'Send'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

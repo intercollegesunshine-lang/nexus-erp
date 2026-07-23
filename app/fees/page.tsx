@@ -91,9 +91,21 @@ export default function FeesPage() {
         </div>
 
         <div className="max-w-4xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10">
-            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-white mb-2">Financials.</h1>
-            <p className="text-white/50 text-sm font-medium">Your payment history and fee invoices.</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-white mb-2">Financials.</h1>
+              <p className="text-white/50 text-sm font-medium">Your payment history and fee invoices.</p>
+            </div>
+            
+            {/* NEW: Total Pay Button for Multiple Dues */}
+            {studentData.fees?.filter((f: any) => f.status === 'PENDING').length > 1 && (
+              <button 
+                onClick={() => window.location.href = '/payments?type=combined'} 
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-white text-black font-semibold text-sm px-6 py-3.5 hover:bg-white/90 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+              >
+                <CreditCard size={16} /> Pay Total Balance
+              </button>
+            )}
           </motion.div>
 
           <div className="space-y-4">
@@ -113,9 +125,14 @@ export default function FeesPage() {
                         <p className="text-3xl font-bold tracking-tight text-white">${fee.amount.toLocaleString()}</p>
                         <p className={`text-xs font-bold tracking-widest uppercase mt-1 ${fee.status === 'PAID' ? 'text-[#28c840]' : 'text-[#ff5f57]'}`}>{fee.status}</p>
                     </div>
-                    {fee.status === 'PAID' && (
+                    {/* NEW: Individual Pay Button or Receipt Button based on Status */}
+                    {fee.status === 'PAID' ? (
                        <button onClick={() => generateReceiptPDF(studentData, fee)} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10">
                           <Download size={20} />
+                       </button>
+                    ) : (
+                       <button onClick={() => window.location.href = `/payments?invoice=${fee.id}`} className="px-5 py-3 rounded-xl bg-white text-black hover:bg-white/90 transition-colors text-sm font-bold flex items-center gap-2 shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                          <CreditCard size={16} /> Pay Now
                        </button>
                     )}
                  </div>

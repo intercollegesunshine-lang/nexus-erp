@@ -293,7 +293,7 @@ export default function StudentApp() {
             <MetricCard index={0} title="Next Class" value={studentData.class?.schedules?.[0]?.subject || "None"} subtitle={studentData.class?.schedules?.[0]?.startTime || "Free day"} icon={Clock} href="/attendance" />
             <MetricCard index={1} title="Overall Grade" value="A-" subtitle="Excellent Standing" icon={Award} href="/academics" />
             <MetricCard index={2} title="Attendance" value="94%" subtitle="This Term" icon={CheckCircle2} href="/attendance" />
-            <MetricCard index={3} title="Fees Due" value={totalPendingFees > 0 ? `$${totalPendingFees.toLocaleString()}` : "$0"} subtitle={totalPendingFees > 0 ? `${pendingFeesList.length} action(s) required` : "Cleared"} icon={CreditCard} alert={totalPendingFees > 0} href="/fees" />
+            <MetricCard index={3} title="Fees Due" value={totalPendingFees > 0 ? `₹${totalPendingFees.toLocaleString()}` : "$0"} subtitle={totalPendingFees > 0 ? `${pendingFeesList.length} action(s) required` : "Cleared"} icon={CreditCard} alert={totalPendingFees > 0} href="/fees" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -374,7 +374,7 @@ export default function StudentApp() {
                 {totalPendingFees > 0 ? (
                   <>
                     <p className="text-xs text-white/40 font-bold tracking-widest uppercase mb-1">Total Due</p>
-                    <p className="text-4xl md:text-5xl font-bold mb-8 tracking-tight">${totalPendingFees.toLocaleString()}</p>
+                    <p className="text-4xl md:text-5xl font-bold mb-8 tracking-tight">₹{totalPendingFees.toLocaleString()}</p>
                     <button onClick={() => window.location.href = '/payments'} className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-white/90 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                       Pay Securely
                     </button>
