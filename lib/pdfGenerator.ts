@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Bold } from 'lucide-react';
 
 // 1. Generate Academic Transcripts
 export const generateTranscriptPDF = (student: any, results?: any[]) => {

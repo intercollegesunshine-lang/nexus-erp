@@ -1,7 +1,9 @@
-// FORCING VERCEL UPDATE
 import NextAuth from "next-auth";
-export const dynamic = 'force-dynamic';
+// Make sure this path correctly points to where you saved auth.ts!
+// If your auth.ts is in src/lib, this should be "@/lib/auth"
 import { authOptions } from "@/lib/auth"; 
+
+export const dynamic = 'force-dynamic';
 
 const handler = NextAuth(authOptions);
 

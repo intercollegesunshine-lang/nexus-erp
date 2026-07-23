@@ -42,20 +42,20 @@ export async function POST(request: Request) {
         });
       }
 
-      // NEW: Read the unique password from the Excel 'Password' column
-      // If the cell is empty, it falls back to 'nexus123'
-      const plainPassword = row.Password ? String(row.Password) : 'nexus123';
-      const uniquePasswordHash = await bcrypt.hash(plainPassword, 10);
+      // NEW: Smart password reader! Checks 'Password', 'password', or 'Pass'
+      const plainPassword = row.Password || row.password || row.Pass || 'nexus123';
+      const uniquePasswordHash = await bcrypt.hash(String(plainPassword), 10);
 
-      // STEP B: Create the User and Student Profile together
-      // Using 'upsert' prevents the database from crashing if you upload the same Excel file twice
+      // STEP B: Create or Update User
       await prisma.user.upsert({
         where: { email: String(row.email) },
-        update: {}, // Do nothing if the user already exists
+        update: { 
+          passwordHash: uniquePasswordHash // UPDATES EXISTING ACCOUNTS WITHOUT DELETING THEM!
+        }, 
         create: {
           email: String(row.email),
-          passwordHash: uniquePasswordHash, // USING THE UNIQUE EXCEL PASSWORD
-          role: row.Role ? String(row.Role).toUpperCase() : 'STUDENT', // Reads 'Role' from Excel, defaults to 'STUDENT'
+          passwordHash: uniquePasswordHash,
+          role: row.Role ? String(row.Role).toUpperCase() : 'STUDENT',
           studentProfile: {
             create: {
               enrollmentNo: String(row.rollNo),

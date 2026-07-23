@@ -97,7 +97,6 @@ export default function FeesPage() {
               <p className="text-white/50 text-sm font-medium">Your payment history and fee invoices.</p>
             </div>
             
-            {/* NEW: Total Pay Button for Multiple Dues */}
             {studentData.fees?.filter((f: any) => f.status === 'PENDING').length > 1 && (
               <button 
                 onClick={() => window.location.href = '/payments?type=combined'} 
@@ -125,9 +124,17 @@ export default function FeesPage() {
                         <p className="text-3xl font-bold tracking-tight text-white">${fee.amount.toLocaleString()}</p>
                         <p className={`text-xs font-bold tracking-widest uppercase mt-1 ${fee.status === 'PAID' ? 'text-[#28c840]' : 'text-[#ff5f57]'}`}>{fee.status}</p>
                     </div>
-                    {/* NEW: Individual Pay Button or Receipt Button based on Status */}
                     {fee.status === 'PAID' ? (
-                       <button onClick={() => generateReceiptPDF(studentData, fee)} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10">
+                       <button onClick={() => {
+                          const paymentDetails = fee.payments?.[0];
+                          const mergedTransaction = {
+                              ...fee,
+                              transactionId: paymentDetails?.transactionId || fee.id,
+                              date: paymentDetails?.date ? new Date(paymentDetails.date).toLocaleDateString() : new Date().toLocaleDateString(),
+                              method: paymentDetails?.paymentMethod || 'Online Payment'
+                          };
+                          generateReceiptPDF(studentData, mergedTransaction);
+                       }} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10">
                           <Download size={20} />
                        </button>
                     ) : (

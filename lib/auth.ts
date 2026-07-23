@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "./prisma";
+import { prisma } from "@/lib/prisma"; // Adjust this import path if your prisma file is elsewhere (e.g., ../../lib/prisma)
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
@@ -19,21 +19,25 @@ export const authOptions: NextAuthOptions = {
        async authorize(credentials) {
          if (!credentials?.email || !credentials?.password) return null;
 
+         // .trim() removes invisible spaces Excel might have added
+         const cleanEmail = credentials.email.trim();
+         const cleanPassword = credentials.password.trim();
+
          const user = await prisma.user.findUnique({
-           where: { email: credentials.email }
+           where: { email: cleanEmail }
          });
 
          if (!user) return null;
 
          let isPasswordValid = false;
 
-         // MAGIC FIX: Check if the stored password is a Bcrypt hash (starts with $2)
+         // Check if the stored password is a Bcrypt hash (starts with $2)
          if (user.passwordHash.startsWith('$2')) {
-           // It's a real hashed password
-           isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
+           // Properly compare the typed password with the encrypted hash
+           isPasswordValid = await bcrypt.compare(cleanPassword, user.passwordHash);
          } else {
-           // It's plain text manually typed into Prisma Studio! (e.g., "password123")
-           isPasswordValid = (credentials.password === user.passwordHash);
+           // Fallback for old plain-text passwords
+           isPasswordValid = (cleanPassword === user.passwordHash);
          }
 
          if (!isPasswordValid) return null;

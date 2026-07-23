@@ -19,7 +19,7 @@ export async function GET() {
         class: {
           include: {
             schedules: { orderBy: { startTime: 'asc' } },
-            // NEW: Fetch all assignments for this student's class!
+            // Fetch all assignments for this student's class!
             assignments: { 
               orderBy: { dueDate: 'asc' },
               include: {
@@ -31,7 +31,11 @@ export async function GET() {
             }
           }
         },
-        fees: { orderBy: { createdAt: 'desc' } },
+        // NEW: Include payments so the PDF generator knows how it was paid!
+        fees: { 
+          orderBy: { createdAt: 'desc' },
+          include: { payments: true } 
+        },
         results: { orderBy: { createdAt: 'desc' } },
         attendances: { orderBy: { date: 'desc' } }
       }

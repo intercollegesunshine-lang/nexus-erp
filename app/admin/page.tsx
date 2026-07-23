@@ -5,7 +5,7 @@ import {
   MoreVertical, Plus, Upload, Calendar, X, 
   CheckCircle2, AlertCircle, FileText, Download,
   Trash2, Edit3, ArrowRight, Clock, Zap, UploadCloud, 
-  DollarSign, Award, Building, CalendarDays, BellRing, ShieldAlert, Save, Menu // <-- Added Menu icon here
+  DollarSign, Award, Building, CalendarDays, BellRing, ShieldAlert, Save, Menu
 } from 'lucide-react';
 
 import { UploadDropzone } from "@/lib/uploadthing";
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
   const [isTimetableModalOpen, setIsTimetableModalOpen] = useState(false);
   const [timetableClass, setTimetableClass] = useState('');
 
-  // --- Academics & Fees State with Search & Dynamic Arrays ---
+  // --- Academics & Fees State ---
   const [feeData, setFeeData] = useState({ studentId: '', title: '', amount: '', dueDate: '' });
   const [feeStudentSearch, setFeeStudentSearch] = useState('');
   const [isFeeSearchOpen, setIsFeeSearchOpen] = useState(false);
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
-  // --- UI Action Handlers ---
+  // --- Action Handlers ---
   const handleBulkUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bulkFile) return;
@@ -272,6 +272,36 @@ export default function AdminDashboard() {
 
   const [editingRecord, setEditingRecord] = useState<{id: string, type: string} | null>(null);
   const [editRecordData, setEditRecordData] = useState<any>({});
+  const [isMarkingPaid, setIsMarkingPaid] = useState<string | null>(null);
+
+  const handleMarkFeePaidCash = async (invoiceId: string) => {
+    if (!confirm("Confirm you have received CASH for this invoice?")) return;
+    setIsMarkingPaid(invoiceId);
+    try {
+      const res = await fetch('/api/admin/fees/mark-paid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Invoice marked as PAID (Cash). Receipt generated.");
+        const updatedProfileRes = await fetch('/api/admin/students');
+        const studentsData = await updatedProfileRes.json();
+        if (studentsData.success) {
+           setStudents(studentsData.data);
+           const updated = studentsData.data.find((s:any) => s.id === selectedStudent.id);
+           if (updated) setSelectedStudent(updated);
+        }
+      } else {
+        alert("Failed to mark as paid: " + data.error);
+      }
+    } catch (error) {
+      alert("Network error.");
+    } finally {
+      setIsMarkingPaid(null);
+    }
+  };
 
   const handleSaveEditedRecord = async (type: 'fee' | 'result' | 'attendance') => {
     try {
@@ -413,7 +443,6 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-black text-white flex overflow-hidden font-sans selection:bg-indigo-500/30">
       
-      {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden" 
@@ -466,7 +495,6 @@ export default function AdminDashboard() {
       {/* --- Main Content --- */}
       <main className="flex-1 h-screen overflow-y-auto relative z-10 scroll-smooth bg-gradient-to-br from-black via-zinc-950 to-black">
         
-        {/* Mobile Header Toggle (Only visible on small screens when sidebar is closed) */}
         {!isSidebarOpen && (
            <div className="lg:hidden p-4 sticky top-0 z-20 bg-black/40 backdrop-blur-md border-b border-white/10">
               <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-colors">
@@ -484,7 +512,6 @@ export default function AdminDashboard() {
                 <p className="text-gray-400 text-sm sm:text-base">Manage student profiles, enrollments, and schedules.</p>
               </div>
               
-              {/* FIXED BUTTON LAYOUT */}
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <button 
                   onClick={() => setIsTimetableModalOpen(true)}
@@ -1018,7 +1045,6 @@ export default function AdminDashboard() {
         {selectedStudent && (
           <div className="h-full flex flex-col">
             
-            {/* Profile Header */}
             <div className="p-6 border-b border-white/10 bg-black/50 relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-bl-full -z-10" />
               <div className="flex justify-between items-start mb-4">
@@ -1033,7 +1059,6 @@ export default function AdminDashboard() {
               <p className="text-indigo-400 font-mono text-sm">{selectedStudent.enrollmentNo}</p>
             </div>
 
-            {/* Profile Navigation Tabs */}
             <div className="flex border-b border-white/10 bg-black/20 px-2 overflow-x-auto no-scrollbar shrink-0">
               {['Overview', 'Fees', 'Results', 'Attendance'].map(tab => (
                 <button
@@ -1046,7 +1071,6 @@ export default function AdminDashboard() {
               ))}
             </div>
 
-            {/* Profile Tab Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               
               {/* TAB: OVERVIEW */}
@@ -1184,10 +1208,20 @@ export default function AdminDashboard() {
                         ) : (
                           <div className="p-4 rounded-xl bg-white/5 border border-white/10 group">
                             <div className="absolute top-4 right-4 opacity-0 lg:group-hover:opacity-100 flex space-x-2 transition-all">
+                              {fee.status === 'PENDING' && (
+                                <button
+                                  onClick={() => handleMarkFeePaidCash(fee.id)}
+                                  disabled={isMarkingPaid === fee.id}
+                                  className="px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 flex items-center gap-1 text-xs font-bold"
+                                  title="Mark as Paid (Cash)"
+                                >
+                                  {isMarkingPaid === fee.id ? '...' : <><CheckCircle2 size={14} /> Cash</>}
+                                </button>
+                              )}
                               <button onClick={() => { setEditingRecord({id: fee.id, type: 'fee'}); setEditRecordData({...fee}); }} className="p-1.5 rounded-md bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"><Edit3 size={16} /></button>
                               <button onClick={() => handleDeleteRecord('fee', fee.id)} className="p-1.5 rounded-md bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"><Trash2 size={16} /></button>
                             </div>
-                            <div className="flex justify-between items-start mb-2 pr-16">
+                            <div className="flex justify-between items-start mb-2 pr-28">
                               <p className="font-medium text-white text-sm">{fee.title}</p>
                               <span className={`text-xs px-2 py-1 rounded font-medium ${fee.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400'}`}>
                                 {fee.status}
@@ -1260,7 +1294,6 @@ export default function AdminDashboard() {
 
       {/* --- MODALS --- */}
       
-      {/* 1. Add Single Student Modal */}
       {isAddStudentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1299,7 +1332,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 2. Build Schedule Modal */}
       {isScheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1344,7 +1376,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 3. Upload Timetable Modal */}
       {isTimetableModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
@@ -1370,7 +1401,7 @@ export default function AdminDashboard() {
                 <div className="bg-black/40 rounded-2xl border border-white/5 p-4 animate-in zoom-in-95">
                   <UploadDropzone
                     endpoint="timetableUploader" 
-                    onClientUploadComplete={(res: { url: string; }[]) => handleTimetableUploadComplete(res[0].url)}
+                    onClientUploadComplete={(res) => handleTimetableUploadComplete(res[0].url)}
                     onUploadError={(error: Error) => alert(`ERROR! ${error.message}`)}
                     appearance={{
                       container: "border-dashed border-white/20 hover:border-blue-500/50 transition-colors p-6",
@@ -1390,7 +1421,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 4. Bulk Upload Modal */}
       {isBulkUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-8 space-y-6 animate-in fade-in zoom-in-95 shadow-2xl">
@@ -1421,7 +1451,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 5. Create Assignment Modal Overlay */}
       {isAssignmentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
           <div className="w-full max-w-md bg-zinc-900 border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200 shadow-2xl max-h-[90vh] overflow-y-auto">
