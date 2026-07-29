@@ -197,6 +197,16 @@ export default function StudentApp() {
           </nav>
 
           <div className="p-4 space-y-4">
+             {/* FIXED: Functional Sign Out Button */}
+             <button 
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className={`w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl transition-all duration-300 group text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 ${!isSidebarOpen && 'lg:justify-center lg:px-0'}`}
+            >
+              <LogOut size={22} className="transition-transform duration-300 group-hover:scale-110" />
+              <span className={`font-bold tracking-wide whitespace-nowrap transition-all duration-300 ${!isSidebarOpen ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'opacity-100'}`}>
+                Sign Out
+              </span>
+            </button>
             {/* User Info Widget */}
             <div className={`p-4 rounded-2xl bg-gradient-to-br from-gray-900 to-black border border-white/10 ${!isSidebarOpen && 'lg:hidden'}`}>
               <div className="flex items-center space-x-3">
@@ -209,17 +219,6 @@ export default function StudentApp() {
                 </div>
               </div>
             </div>
-
-            {/* FIXED: Functional Sign Out Button */}
-            <button 
-              onClick={() => signOut({ callbackUrl: '/login' })}
-              className={`w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl transition-all duration-300 group text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 ${!isSidebarOpen && 'lg:justify-center lg:px-0'}`}
-            >
-              <LogOut size={22} className="transition-transform duration-300 group-hover:scale-110" />
-              <span className={`font-bold tracking-wide whitespace-nowrap transition-all duration-300 ${!isSidebarOpen ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'opacity-100'}`}>
-                Sign Out
-              </span>
-            </button>
           </div>
         </div>
       </aside>
